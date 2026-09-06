@@ -1,19 +1,19 @@
 # xplus
 
-`xplus` provides **PLUS-derived extensions** for Positive and Unlabeled Learning from Unbalanced Cases and Sparse Structures (Zhou et al., 2022). This development checkout targets **1.0.0**, a major release with breaking numerical and interface contracts. It is not a reproduction of the paper's experiments and does not establish predictive superiority or guarantee calibrated probabilities.
+`xplus` provides **PLUS-derived extensions** for Positive and Unlabeled Learning from Unbalanced Cases and Sparse Structures (Zhou et al., 2022). This is the production release **1.0.0**, a major release with breaking numerical and interface contracts. It is not a reproduction of the paper's experiments and does not establish predictive superiority or guarantee calibrated probabilities.
 
-## Installation and development origin
+## Installation
 
-The package name remains `xplus`. The private development repository is <https://github.com/alrobles/xplus-devel>; access must already be configured for your account. No credentials should be embedded in installation commands or committed files.
+Install the production version from the production repository:
 
 ```r
 # install.packages("remotes")
 remotes::install_github("alrobles/xplus-devel")
 ```
 
-The production repository <https://github.com/alrobles/xplus> is separate and unchanged by this development work. Do not use its release results as verification of this candidate.
+Development, audit harnesses and historical baselines live in the development repository <https://github.com/alrobles/xplus-develeopment>.
 
-R >= 4.1.0 is required (the source uses the native pipe), and the declared minimum glmnet version is 4.1-8. The verification environment uses **R 4.5.2 and glmnet 5.0**; the dependency minimum is not a claim that other versions have been tested.
+R >= 4.1.0 is required (the source uses the native pipe), and the declared minimum glmnet version is 4.1-8. The verification environment used R 4.5.2 and glmnet 5.0; the dependency minimum is not a claim that other versions have been tested.
 
 ## What is PU learning?
 
@@ -80,26 +80,15 @@ If proposed soft targets fail that guard, final fitting falls back to the origin
 
 Supplying `seed` creates a local reproducible run and restores the caller's previous RNG state (including absence of `.Random.seed`). It does not reset the external RNG stream. With `seed = NULL`, normal caller-controlled RNG behavior applies.
 
-## Verification and diagnostic harnesses
+## Verification
 
-Run package tests from this development repository and inspect the reported **FAIL/WARN/SKIP counts**; an exit code alone is not a pass criterion. For an explicit failure gate:
-
-```bash
-Rscript -e 'devtools::test(stop_on_failure = TRUE)'
-```
-
-The historical numerical-audit baseline in `inst/benchmarks/numerical-audit` is preserved. Write new candidate results separately under `inst/benchmarks/v1.0.0`, never over the baseline:
+Run package tests and inspect the reported **FAIL/WARN/SKIP counts**; an exit code alone is not a pass criterion:
 
 ```bash
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 Rscript inst/tools/audit_core.R inst/benchmarks/v1.0.0
-Rscript inst/tools/audit_metrics.R inst/benchmarks/v1.0.0
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 Rscript -e 'devtools::test(stop_on_failure = TRUE)'
 ```
 
-Run the core harness first: it creates the output directory required by the metrics harness. Its optional second argument is a local checkout of the original PLUS source (`xiaoyulu95/PLUS`, also available as `zcslab/PLUS`). Audit scripts are **diagnostics, not CI pass/fail gates**: exit status 0 does not mean no findings. Inspect CSV findings, recorded source revisions and dependency versions; repeated variants and proposed validation contracts are not one distinct bug per row. The preserved audit is not a rerun or validation of the paper's experiments.
-
-`inst/tools/benchmark_paths.R` compares iterative paths and reports AUC, class error, support, runtime and stability; it does not establish predictive superiority. Its default input is a deterministic synthetic fixture; metrics against its training labels are diagnostics, not estimates of true predictive quality. Required scripts in `inst/tools` are packaged so installed-package benchmark tests can resolve them with `system.file()`. `.devin` and `inst/benchmarks` are excluded from the source package; results remain development artifacts.
-
-To keep build/check artifacts out of the checkout, use a temporary directory (the repository path is captured before changing directory):
+For a full `R CMD check`, build and check from a temporary directory:
 
 ```bash
 repo="$PWD"
@@ -107,7 +96,7 @@ check_dir="$(mktemp -d)"
 (cd "$check_dir" && R CMD build "$repo" && R CMD check xplus_1.0.0.tar.gz)
 ```
 
-Review the complete check log, including warnings and notes. Do not commit tarballs, check directories, credentials or generated audit outputs as package source by accident.
+Audit harnesses, historical baselines and candidate diagnostics are maintained in the development repository <https://github.com/alrobles/xplus-develeopment>; they are not included in the production source tree.
 
 ## Reference
 

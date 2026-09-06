@@ -1,11 +1,12 @@
-# xplus 1.0.0 (development candidate)
+# xplus 1.0.0
 
 This is a major, breaking upgrade of the PLUS-derived package extensions, not
 an exact reproduction of the paper or evidence of predictive superiority.
 Response-scale model scores are not guaranteed to be calibrated probabilities.
-The package remains `xplus`; development is private at
-<https://github.com/alrobles/xplus-devel>. The production repository
-<https://github.com/alrobles/xplus> is separate and unchanged by this work.
+The package remains `xplus`; the production repository is
+<https://github.com/alrobles/xplus-devel>. Development, audit harnesses and
+historical baselines live in the development repository
+<https://github.com/alrobles/xplus-develeopment>.
 
 ## Breaking interfaces and metrics
 
@@ -78,15 +79,13 @@ The package remains `xplus`; development is private at
 
 * Regenerate reference manuals from current roxygen contracts. Installation
   examples target `alrobles/xplus-devel` without embedded credentials.
-* Preserve `inst/benchmarks/numerical-audit` as the historical baseline; new
-  candidate audit results belong under `inst/benchmarks/v1.0.0`. Diagnostic
-  scripts are not CI gates: exit status 0 is not a clean-audit assertion; inspect
-  CSVs, source revisions and dependency versions. No paper experiments were
-  rerun to establish these contracts.
+* Diagnostic harnesses, the historical numerical-audit baseline and candidate
+  diagnostics are maintained in the development repository
+  <https://github.com/alrobles/xplus-develeopment>; they are not part of the
+  production source tree.
 * Document `Rscript -e 'devtools::test(stop_on_failure = TRUE)'` and require
-  inspection of FAIL/WARN/SKIP counts. Exclude `.devin` and `inst/benchmarks`
-  from source builds, but package `inst/tools` because installed benchmark tests
-  require its scripts. Keep build/check output outside the tracked checkout.
+  inspection of FAIL/WARN/SKIP counts. Keep build/check output outside the
+  tracked checkout.
 
 # xplus 0.1.1
 
