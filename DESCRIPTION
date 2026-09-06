@@ -1,34 +1,37 @@
 Package: xplus
 Title: Positive and Unlabeled Learning from Unbalanced Cases and Sparse Structures
-Version: 0.1.1
+Version: 1.0.0
 Authors@R: 
     person("Angel", "Robles", , "a.l.robles.fernandez@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-4674-4270"))
-Description: Implements the PLUS algorithm for positive and unlabeled (PU)
-    learning from unbalanced cases and sparse structures, as described in
+Description: Provides PLUS-derived extensions for positive and unlabeled (PU)
+    learning from unbalanced cases and sparse structures, based on
     Zhou et al. (2022) <doi:10.1371/journal.pcbi.1009956>. Iteratively
     relabels unlabeled observations via penalised logistic regression and
-    calibrated pseudo-label updates, then refits a final sparse model.
-    Provides prediction, coefficient extraction, and assessment utilities.
+    pseudo-label updates, then refits a final sparse model. Includes weighted
+    bootstrap sampling, convergence diagnostics, prediction, coefficient
+    extraction, and assessment utilities.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Depends: 
-    R (>= 3.5.0)
+    R (>= 4.1.0)
 LazyData: true
 Imports: 
-    glmnet,
+    glmnet (>= 4.1-8),
     Matrix,
+    methods,
     stats,
-    survival,
-    tibble
+    tibble,
+    utils
 Suggests:
     covr,
     knitr,
     rmarkdown,
+    survival,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-URL: https://github.com/alrobles/xplus
-BugReports: https://github.com/alrobles/xplus/issues
+URL: https://github.com/alrobles/xplus-devel
+BugReports: https://github.com/alrobles/xplus-devel/issues
+Config/roxygen2/version: 8.0.0

@@ -19,6 +19,15 @@ print.xplus <- function(x, digits = max(3, getOption("digits") - 3), ...) {
   cat("xplus model (PLUS algorithm)\n")
   cat("Call: ", deparse(x$call), "\n")
   cat("Iterations:", x$n_iter, "\n")
+  cat("Stop reason:", x$stop_reason, "\n")
+  if (!is.null(x$original_y)) cat("Original positives:", sum(x$original_y == 1), "\n")
+  if (!is.null(x$fallback_used)) {
+    cat("Fallback used:", x$fallback_used, "\n")
+    if (x$fallback_used) cat("Fallback reason:", x$fallback_reason, "\n")
+    cat("Final training target range:", paste(format(range(x$y), digits = digits), collapse = " to "), "\n")
+    cat("Final soft targets:", sum(x$y > 0 & x$y < 1), "\n")
+  }
+  if (!is.null(x$cv_measure)) cat("CV measure:", x$cv_measure, "\n")
   cat("Cutoff:", format(x$cutoff, digits = digits), "\n\n")
 
   opt_lams <- c(x$xplus$lambda.min, x$xplus$lambda.1se)

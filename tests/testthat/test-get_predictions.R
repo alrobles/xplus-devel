@@ -7,6 +7,8 @@ test_that("get_predictions returns correct structure with use_cutoff = TRUE", {
   fit <- xplus(x, y, max_iter = 5)
   out <- get_predictions(fit, newx = x, newy = y, use_cutoff = TRUE)
 
+  expect_identical(levels(out$predicted), c("Class1", "Class2"))
+  expect_identical(as.character(out$predicted), ifelse(out$Class1 > fit$cutoff, "Class1", "Class2"))
   expect_s3_class(out, "tbl_df")
   expect_equal(nrow(out), nrow(x))
   expect_named(out, c("truth", "Class1", "Class2", "predicted"))
@@ -26,6 +28,8 @@ test_that("get_predictions returns correct structure with use_cutoff = FALSE", {
   fit <- xplus(x, y, max_iter = 5)
   out <- get_predictions(fit, newx = x, newy = y, use_cutoff = FALSE)
 
+  expect_identical(levels(out$predicted), c("Class1", "Class2"))
+  expect_identical(as.character(out$predicted), ifelse(out$Class1 > 0.5, "Class1", "Class2"))
   expect_s3_class(out, "tbl_df")
   expect_equal(nrow(out), nrow(x))
   expect_named(out, c("truth", "Class1", "Class2", "predicted"))

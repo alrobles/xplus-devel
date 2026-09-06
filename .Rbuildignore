@@ -6,4 +6,5 @@
 ^\.github$
 ^data-raw$
 ^cran-comments\.md$
-^inst/tools$
+^\.devin$
+^inst/benchmarks$

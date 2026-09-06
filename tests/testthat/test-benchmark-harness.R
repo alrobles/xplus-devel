@@ -95,3 +95,16 @@ test_that("benchmark harness is stable under fixed seeds for decision metrics", 
 
   expect_equal(run_a, run_b)
 })
+
+test_that("benchmark default inputs are reproducible and usable", {
+  harness <- new.env(parent = baseenv())
+  sys.source(benchmark_harness_path(), envir = harness)
+  inputs <- harness$default_benchmark_inputs()
+  expect_true(is.matrix(inputs$x))
+  expect_true(all(is.finite(inputs$x)))
+  expect_equal(length(inputs$y), nrow(inputs$x))
+  expect_true(all(table(inputs$y) >= 3))
+  expect_identical(inputs, harness$default_benchmark_inputs())
+  result <- harness$run_xplus_path_benchmark(seeds = 2, path_specs = harness$default_path_specs(max_iter = 2))
+  expect_equal(nrow(result$runs), 2)
+})

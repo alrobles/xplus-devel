@@ -4,22 +4,22 @@
 \alias{predict.xplus}
 \title{Predict from an xplus model}
 \usage{
-\method{predict}{xplus}(object, ..., newx = NULL, s = "lambda.min", type = "response")
+\method{predict}{xplus}(object, newx = NULL, s = "lambda.min", type = "response", ...)
 }
 \arguments{
 \item{object}{An \code{xplus} object.}
 
-\item{...}{Additional arguments (unused).}
+\item{newx}{Optional finite numeric feature matrix; defaults to training data. Named training features must match and are reordered automatically.}
 
-\item{newx}{Optional new feature matrix.}
-
-\item{s}{Penalty value name (\code{"lambda.min"}, \code{"lambda.1se"}) or numeric lambda.}
+\item{s}{Exact penalty name (\code{"lambda.min"}, \code{"lambda.1se"}) or finite nonnegative numeric lambda vector. Cache-only objects support only \code{"lambda.min"}.}
 
 \item{type}{Prediction type: \code{"response"}, \code{"link"}, or \code{"class"}.}
+
+\item{...}{Additional arguments are not supported and cause an error.}
 }
 \value{
-A matrix of probabilities (\code{type = "response"}), log-odds linear
-predictors (\code{type = "link"}), or class labels (\code{type = "class"}).
+Probabilities (\code{type = "response"}) or log-odds (\code{type = "link"}); cached probabilities of 0 and 1 give infinite log-odds.
+Classes use a factor with fixed levels \code{"0"}, \code{"1"} for one lambda, or a dimension-preserving 0/1 matrix for multiple lambdas.
 }
 \description{
 Predict from an xplus model

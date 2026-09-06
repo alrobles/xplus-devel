@@ -24,11 +24,11 @@ default_path_specs <- function(
 }
 
 default_benchmark_inputs <- function() {
-  if (!exists("fit_xplus_example", inherits = TRUE)) {
-    data("fit_xplus_example", package = "xplus", envir = environment())
-  }
-  fit <- get("fit_xplus_example", inherits = TRUE)
-  list(x = fit$x, y = fit$y)
+  index <- seq_len(120)
+  x <- cbind(x1 = sin(index), x2 = cos(index / 3),
+             x3 = sin(index / 7), x4 = cos(index / 11))
+  y <- as.integer(x[, 1] > 0.6 & index %% 2 == 0)
+  list(x = x, y = y)
 }
 
 extract_support <- function(fit) {

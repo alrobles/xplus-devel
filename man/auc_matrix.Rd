@@ -4,17 +4,17 @@
 \alias{auc_matrix}
 \title{Compute AUC from matrix labels}
 \usage{
-auc_matrix(y, prob, weights)
+auc_matrix(y, prob, weights = NULL)
 }
 \arguments{
-\item{y}{One-hot encoded label matrix.}
+\item{y}{Two-column finite nonnegative class masses (negative, positive); soft labels, counts, and zero-mass rows are supported.}
 
-\item{prob}{Predicted probabilities.}
+\item{prob}{Finite numeric scores, one per row; values outside \verb{[0, 1]} are allowed.}
 
-\item{weights}{Optional sample weights.}
+\item{weights}{Optional finite nonnegative numeric row weights without recycling; NULL means unit weights.}
 }
 \value{
-Numeric AUC value.
+Weighted rank AUC with half credit for ties; NA with a warning if either effective class mass is zero.
 }
 \description{
 Compute AUC from matrix labels
@@ -28,5 +28,5 @@ auc_matrix(y, p)
 Zhou et al. (2022). doi:10.1371/journal.pcbi.1009956
 }
 \seealso{
-\code{\link[=auc]{auc()}}, \code{\link[=xplus_cv_lognet]{xplus_cv_lognet()}}
+\code{\link[=auc]{auc()}}, \code{\link[=assess]{assess()}}
 }

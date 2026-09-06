@@ -28,27 +28,16 @@ test_that("xplus records max_iter stop reason when no early stopping condition t
   expect_false("convergence_reached" %in% names(out))
 })
 
-test_that("xplus can stop on early label stability", {
+test_that("xplus rejects a disabled learning rate", {
   skip_if_not_installed("glmnet")
   set.seed(123)
   x <- matrix(rnorm(100 * 5), ncol = 5)
   y <- c(rep(1, 25), rep(0, 75))
 
-  fit <- xplus(
-    x,
-    y,
-    learning_rate = 0,
-    sample_use_time = 1e6,
-    convergence_threshold = 0.9,
-    max_iter = 10
-  )
-
-  expect_equal(fit$n_iter, 1)
-  expect_equal(fit$iterative_path, "continuous_enhancement")
-  expect_equal(summary(fit)$iterative_path, "continuous_enhancement")
+  expect_error(xplus(x, y, learning_rate = 0, max_iter = 10), "learning_rate")
 })
 
-test_that("xplus stabilization is based on soft-label movement magnitude", {
+test_that("xplus stabilization uses undamped global residuals", {
   skip_if_not_installed("glmnet")
   set.seed(234)
   x <- matrix(rnorm(100 * 5), ncol = 5)
@@ -65,8 +54,8 @@ test_that("xplus stabilization is based on soft-label movement magnitude", {
   )
 
   expect_equal(fit$iterative_path, "continuous_enhancement")
-  expect_equal(fit$n_iter, 1)
-  expect_equal(fit$stop_reason, "label_stability")
+  expect_equal(fit$n_iter, 10)
+  expect_equal(fit$stop_reason, "max_iter")
 })
 
 test_that("continuous enhancement path keeps pseudo-labels continuous", {
@@ -164,7 +153,7 @@ test_that("xplus rejects x with NA values", {
 
   expect_error(
     xplus(x, y, max_iter = 2),
-    "`x` must not contain NA values.",
+    "`x` must not contain NA or NaN values.",
     fixed = TRUE
   )
 })
@@ -202,8 +191,7 @@ test_that("xplus rejects non-integer-like sample_use_time", {
 
   expect_error(
     xplus(x, y, sample_use_time = 30.5, max_iter = 2),
-    "`sample_use_time` must be an integer-like value.",
-    fixed = TRUE
+    "sample_use_time.*integer"
   )
 })
 

@@ -20,6 +20,10 @@
 #   normalised (or clamped) residuals.
 # @noRd
 normalize_residuals <- function(map_pred_y, degenerate_threshold = 1e-6) {
+  if (!is.numeric(map_pred_y) || is.complex(map_pred_y) || any(!is.finite(map_pred_y))) {
+    stop("Residuals must be finite numeric values.", call. = FALSE)
+  }
+  .xplus_scalar(degenerate_threshold, "degenerate_threshold", 0)
   if (any(map_pred_y > 0)) {
     max_pos <- max(map_pred_y[map_pred_y > 0])
     if (max_pos < degenerate_threshold) {

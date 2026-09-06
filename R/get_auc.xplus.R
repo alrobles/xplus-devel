@@ -4,7 +4,7 @@
 #' @param newx Feature matrix.
 #' @param newy True labels.
 #' @param weights Optional sample weights.
-#' @param ... Additional arguments.
+#' @param ... Arguments passed to [predict.xplus()], such as `s` selecting a single lambda.
 #'
 #' @return Numeric AUC value.
 #' @seealso [assess()], [auc()]
@@ -25,7 +25,9 @@ get_auc <- function(object, newx = NULL, newy = NULL, weights = NULL, ...) {
 get_auc.xplus <- function(object, newx = NULL, newy = NULL, weights = NULL, ...) {
   if (is.null(newx)) stop("Provide newx data", call. = FALSE)
   if (is.null(newy)) stop("Provide newy data", call. = FALSE)
-  p_response <- predict(object, newx = newx, type = "response")
-  names(p_response) <- "auc"
-  auc(newy, p_response, w = weights)
+  p_response <- stats::predict(object, newx = newx, type = "response", ...)
+  if (NCOL(p_response) != 1L) {
+    stop("get_auc() requires predictions for a single lambda in `s`.", call. = FALSE)
+  }
+  auc(newy, as.numeric(p_response), w = weights)
 }

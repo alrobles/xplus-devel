@@ -4,16 +4,16 @@
 #' @param pred_y Predicted probabilities matrix.
 #' @param cutoff Numeric classification cutoff.
 #' @param predicted_coefficients Sparse coefficient matrix.
-#' @param n_iter Number of iterations executed.
+#' @param n_iter,history,sampling_counts,draw_counts Number of completed iterations, per-iteration diagnostics, and per-observation unlabeled inclusion-round and draw counts; optional diagnostics default to `NULL`.
 #' @param x Training feature matrix used to fit the model.
-#' @param y Final pseudo-label state used for final fitting.
+#' @param y,final_labels Identical actual target probabilities used for final fitting; `final_labels` defaults to `y`.
 #' @param alpha Elastic-net alpha used during fitting.
 #' @param learning_rate Learning rate used during pseudo-label updates.
-#' @param pseudo_labels Final pseudo-label probabilities.
-#' @param iterative_path Internal iterative path used for pseudo-label updates.
+#' @param pseudo_labels,original_y,fallback_used,fallback_reason Proposed probabilities before fallback, original numeric binary labels, fallback flag and reason (empty if unused); optional metadata default to `NULL` for legacy bundles.
+#' @param iterative_path,final_foldid,cv_measure,sigmoid_scale,sampling Iterative path and optional final cross-validation folds, measure (`deviance` or `auc`), positive sigmoid scale, and sampling mode (`bootstrap` or `unique`); optional controls default to `NULL`.
 #' @param qq Quantile parameter used for cutoff calibration.
 #' @param call Original function call.
-#' @param max_iter Maximum number of iterations configured for fitting.
+#' @param max_iter,min_iter,stability_window,min_coverage Maximum iterations and optional minimum iterations, consecutive stability rounds, and unlabeled coverage required for stopping; optional controls default to `NULL`.
 #' @param stop_reason Reason fitting stopped: `"max_iter"`, `"label_stability"`,
 #'   `"budget_exhausted"`, or `"degenerate_labels"` (the pseudo-labels of the
 #'   iterative training subset collapsed to a single class).
@@ -41,10 +41,26 @@ new_xplus <- function(
   qq = numeric(),
   call = character(),
   max_iter = integer(),
-  stop_reason = character()
+  stop_reason = character(),
+  original_y = NULL,
+  final_labels = y,
+  fallback_used = NULL,
+  fallback_reason = NULL,
+  history = NULL,
+  sampling_counts = NULL,
+  draw_counts = NULL,
+  final_foldid = NULL,
+  cv_measure = NULL,
+  sigmoid_scale = NULL,
+  sampling = NULL,
+  min_iter = NULL,
+  stability_window = NULL,
+  min_coverage = NULL
 ) {
-  predicted_coefficients <- Matrix::Matrix(predicted_coefficients, sparse = TRUE)
-  stop_reason <- as.character(stop_reason)[1]
+  predicted_coefficients <- methods::as(
+    methods::as(methods::as(Matrix::Matrix(predicted_coefficients, sparse = TRUE), "dMatrix"), "generalMatrix"),
+    "CsparseMatrix"
+  )
 
   structure(
     list(
@@ -58,11 +74,25 @@ new_xplus <- function(
       alpha = alpha,
       learning_rate = learning_rate,
       pseudo_labels = pseudo_labels,
-      iterative_path = as.character(iterative_path),
+      iterative_path = iterative_path,
       qq = qq,
       call = call,
       max_iter = max_iter,
-      stop_reason = stop_reason
+      stop_reason = stop_reason,
+      original_y = original_y,
+      final_labels = final_labels,
+      fallback_used = fallback_used,
+      fallback_reason = fallback_reason,
+      history = history,
+      sampling_counts = sampling_counts,
+      draw_counts = draw_counts,
+      final_foldid = final_foldid,
+      cv_measure = cv_measure,
+      sigmoid_scale = sigmoid_scale,
+      sampling = sampling,
+      min_iter = min_iter,
+      stability_window = stability_window,
+      min_coverage = min_coverage
     ),
     class = "xplus"
   )

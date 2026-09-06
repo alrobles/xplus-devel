@@ -15,60 +15,70 @@ xplus(
   nfolds = 4,
   max_iter = 10000,
   convergence_threshold = 0.9,
-  seed = NULL
+  seed = NULL,
+  sigmoid_scale = 10,
+  min_iter = 5,
+  stability_window = 5,
+  min_coverage = 0.9,
+  sampling = c("bootstrap", "unique"),
+  cv_measure = c("deviance", "auc"),
+  degenerate_threshold = 1e-06
 )
 }
 \arguments{
-\item{x}{Numeric feature matrix.}
+\item{x}{Finite numeric feature matrix with at least two columns.}
 
-\item{y}{Binary vector where \code{1} indicates known positives and \code{0} indicates unlabeled samples.}
+\item{y}{Binary vector where \code{1} indicates known positives and \code{0} indicates unlabeled samples; factors are interpreted by their labels.}
 
-\item{alpha}{Elastic-net mixing parameter passed to \code{\link[glmnet:cv.glmnet]{glmnet::cv.glmnet()}}.}
+\item{alpha}{Elastic-net mixing parameter in \verb{[0, 1]}, not the sigmoid scale in the PLUS paper.}
 
-\item{sample_use_time}{Package extension controlling the unlabeled-sampling budget:
-number of times each unlabeled sample can be selected before its sampling
-probability reaches zero.}
+\item{sample_use_time}{Unlabeled-sampling budget inherited from the reference implementation:
+maximum number of completed sampling rounds containing each unlabeled case,
+not the number of bootstrap copies within a round.}
 
-\item{learning_rate}{Package extension controlling pseudo-label smoothing in
-\verb{[0, 1]}.}
+\item{learning_rate}{Pseudo-label smoothing rate in \verb{(0, 1]}; values below one
+retain the package's global-update, hard-thresholded enhancement path.}
 
 \item{qq}{Quantile used to define the positive-reference cutoff.}
 
 \item{verbose}{Logical; print iterative progress messages.}
 
-\item{nfolds}{Number of CV folds used in the iterative fit.}
+\item{nfolds}{Requested CV folds, an integer at least three; reduced for small classes.}
 
 \item{max_iter}{Maximum number of pseudo-labeling iterations.}
 
-\item{convergence_threshold}{Proportion threshold for soft-label stabilization and sampling exhaustion checks.}
+\item{convergence_threshold}{Required stability score in \verb{(0, 1]}, evaluated before learning-rate damping.}
 
-\item{seed}{Optional random seed for reproducibility.}
+\item{seed}{Optional nonnegative integer seed, isolated from the caller's RNG stream.}
+
+\item{sigmoid_scale, degenerate_threshold}{Positive sigmoid scale and nonnegative residual-clamping tolerance.}
+
+\item{min_iter, stability_window}{Minimum iterations and consecutive stable iterations required before declaring convergence.
+\code{xplus} retains two iterative paths, distinct from the paper's pseudocode:
+\code{"current"} (\code{learning_rate = 1}) uses sampled Bernoulli labels, while
+\code{"continuous_enhancement"} (\code{learning_rate < 1}) smooths probabilities and
+updates all unlabeled hard labels. Both use soft final fitting targets.
+Stability compares the undamped mapped scores with the current pseudo-labels
+across all unlabeled cases and requires a full window and sampling coverage.}
+
+\item{min_coverage}{Minimum fraction of unlabeled cases sampled before convergence, in \verb{[0, 1]}.
+Bootstrap multiplicities are represented as case weights, keeping duplicate
+copies together in CV. \code{sampling = "unique"} retains legacy deduplication.
+Final-fit fallback is based on effective class mass, not thresholded labels,
+and is recorded with the actual fitting targets and the iteration history.}
+
+\item{sampling, cv_measure}{Sampling convention (\code{"bootstrap"} or \code{"unique"}) and CV criterion (\code{"deviance"} or \code{"auc"}); deviance is the default for both fitting stages.}
 }
 \value{
-An object of class \code{"xplus"}.
+An object of class \code{"xplus"} containing predictions, original and final labels, pseudo-labels, fallback metadata, sampling counts, and history.
 }
 \description{
-Fit the PLUS algorithm for positive-unlabeled learning.
+Fit a PLUS-derived model for positive-unlabeled learning.
 }
 \details{
 Core PLUS behavior alternates between fitting penalized logistic models on known
-positives plus sampled unlabeled cases, calibrating predictions with a positive
+positives plus sampled unlabeled cases, anchoring predictions to a positive
 quantile cutoff, and iteratively relabeling unlabeled samples.
-
-\code{xplus} also provides package-specific extensions in the
-\code{"continuous_enhancement"} path (\code{learning_rate < 1}):
-\itemize{
-\item pseudo-label smoothing via \code{learning_rate}
-\item global unlabeled updates each iteration (instead of only sampled cases)
-\item practical stopping heuristics based on a rolling soft-label stabilization
-score and unlabeled-sampling budget exhaustion (\code{sample_use_time})
-}
-
-User-facing semantics are:
-\itemize{
-\item \code{learning_rate = 1} keeps the \code{"current"} path behavior
-\item \code{learning_rate < 1} enables the \code{"continuous_enhancement"} extensions
-}
 }
 \examples{
 set.seed(1)

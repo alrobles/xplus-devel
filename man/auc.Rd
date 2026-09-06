@@ -4,17 +4,17 @@
 \alias{auc}
 \title{Compute area under the ROC curve}
 \usage{
-auc(y, prob, w)
+auc(y, prob, w = NULL)
 }
 \arguments{
-\item{y}{True binary labels.}
+\item{y}{Binary 0/1 vector, including logical, character, or factor encodings.}
 
-\item{prob}{Predicted probabilities.}
+\item{prob}{Finite numeric scores, one per label; values outside \verb{[0, 1]} are allowed.}
 
-\item{w}{Optional sample weights.}
+\item{w}{Optional finite nonnegative numeric sample weights; NULL means unit weights.}
 }
 \value{
-Numeric AUC value.
+Numeric rank AUC with half credit for ties; NA with a warning if either effective class mass is zero.
 }
 \description{
 Compute area under the ROC curve

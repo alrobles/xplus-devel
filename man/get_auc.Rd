@@ -18,7 +18,7 @@ get_auc(object, newx = NULL, newy = NULL, weights = NULL, ...)
 
 \item{weights}{Optional sample weights.}
 
-\item{...}{Additional arguments.}
+\item{...}{Arguments passed to \code{\link[=predict.xplus]{predict.xplus()}}, such as \code{s} selecting a single lambda.}
 }
 \value{
 Numeric AUC value.

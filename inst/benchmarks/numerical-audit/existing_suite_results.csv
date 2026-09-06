@@ -1,0 +1,4 @@
+repository,pass,fail,warn,skip,R,glmnet
+xplus,120,3,101,0,4.5.2,5.0
+phylopred,146,2,470,0,4.5.2,5.0
+phylopred-devel,155,0,2,0,4.5.2,5.0

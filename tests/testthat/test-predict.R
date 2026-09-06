@@ -28,7 +28,7 @@ test_that("predict link matches glmnet linear predictor", {
   expect_equal(pred_link, expected)
 })
 
-test_that("predict type='link' returns log-odds (values outside [0,1])", {
+test_that("predict type='link' returns the backend log-odds", {
   skip_if_not_installed("glmnet")
   set.seed(123)
   x <- matrix(rnorm(120 * 4), ncol = 4)
@@ -39,15 +39,16 @@ test_that("predict type='link' returns log-odds (values outside [0,1])", {
   pred_link <- predict(fit, newx = x, type = "link")
 
   expect_equal(nrow(pred_link), nrow(x))
-  # log-odds are not bounded to [0, 1]
-  expect_true(any(pred_link < 0) || any(pred_link > 1))
+  # log-odds match glmnet without requiring random data to produce any particular range
+  expected <- stats::predict(fit$xplus$glmnet.fit, x, s = fit$xplus$lambda.min, type = "link")
+  expect_equal(pred_link, expected)
 
   # link and response are consistent: sigmoid(link) == response
   pred_response <- predict(fit, newx = x, type = "response")
   expect_equal(1 / (1 + exp(-pred_link)), pred_response, tolerance = 1e-6)
 })
 
-test_that("predict type='link' works without newx (uses stored pred_y)", {
+test_that("predict type='link' works without newx (uses training data)", {
   skip_if_not_installed("glmnet")
   set.seed(123)
   x <- matrix(rnorm(120 * 4), ncol = 4)
@@ -74,13 +75,14 @@ test_that("predict type='link' returns log-odds (linear predictor)", {
   pred_response <- predict(fit, newx = x, type = "response")
 
   expect_equal(nrow(pred_link), nrow(x))
-  # Link values are unbounded log-odds, not probabilities
-  expect_true(any(pred_link < 0) || any(pred_link > 1))
+  # Link values match the backend linear predictor, regardless of their observed range
+  expected <- stats::predict(fit$xplus$glmnet.fit, x, s = fit$xplus$lambda.min, type = "link")
+  expect_equal(pred_link, expected)
   # sigmoid(link) should equal response
   expect_equal(1 / (1 + exp(-pred_link)), pred_response, tolerance = 1e-6)
 })
 
-test_that("predict type='link' without newx returns log-odds from stored pred_y", {
+test_that("predict type='link' without newx returns backend training log-odds", {
   skip_if_not_installed("glmnet")
   set.seed(123)
   x <- matrix(rnorm(120 * 4), ncol = 4)
@@ -89,9 +91,7 @@ test_that("predict type='link' without newx returns log-odds from stored pred_y"
   fit <- xplus(x, y, max_iter = 5)
 
   pred_link_null <- predict(fit, newx = NULL, type = "link")
-  stored_prob <- fit$pred_y
-  stored_prob_clamped <- pmin(pmax(stored_prob, 1e-15), 1 - 1e-15)
-  expected_link <- log(stored_prob_clamped / (1 - stored_prob_clamped))
+  expected_link <- stats::predict(fit$xplus$glmnet.fit, x, s = fit$xplus$lambda.min, type = "link")
 
   expect_equal(pred_link_null, expected_link)
 })

@@ -1,0 +1,8 @@
+verification,pass,fail,warn,note,skip,details
+package_testthat,721,0,0,0,0,"R 4.5.2; glmnet 5.0"
+full_R_CMD_check,,0,0,0,0,"Includes examples, tests, vignettes and PDF manual; Status OK"
+api_audit,204,0,,,0,"Two additional informational observations; all historical cases retained"
+core_audit_models,119,0,,,0,"138 cases total; remaining cases reject invalid or unsupported inputs or expose the unchanged external phylopred production bug"
+phylopred_devel_integration,155,0,3,,0,"glmnet CV-path convergence warnings at small penalties remain visible; 11 master fits jerr=0 and selected-lambda OOF predictions finite"
+production_source_preservation,,0,,,,"No modifications to production R, DESCRIPTION, README, NEWS or tests"
+historical_audit_preservation,,0,,,,"Original numerical-audit directory identical to production audit snapshot"

@@ -14,16 +14,16 @@ assess(object, newx = NULL, newy, weights = NULL, ...)
 
 \item{newx}{Optional feature matrix.}
 
-\item{newy}{True labels.}
+\item{newy}{Binary 0/1 labels or a two-column finite nonnegative matrix of negative and positive class masses; soft vectors are not accepted.}
 
-\item{weights}{Optional sample weights.}
+\item{weights}{Optional finite nonnegative numeric row weights without recycling; NULL means unit weights.}
 
 \item{...}{Additional arguments passed to \code{\link[=predict]{predict()}}.}
 }
 \value{
 A named list with \code{deviance}, \code{class}, \code{auc}, \code{mse}, and \code{mae}.
 For \code{class} metric, the threshold used is the model's cutoff (from
-\code{object$cutoff}), consistent with \code{predict(type = "class")}.
+\code{object$cutoff}), consistent with \code{predict(type = "class")}; MSE and MAE sum both class-column losses (twice the scalar loss). Undefined metrics return NA with a warning.
 }
 \description{
 Assess predictive performance

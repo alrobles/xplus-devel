@@ -14,10 +14,10 @@ get_predictions(object, newx, newy, use_cutoff = TRUE)
 \item{newy}{True labels.}
 
 \item{use_cutoff}{Logical; if \code{TRUE}, classify with the model's cutoff. If \code{FALSE},
-classify with the default glmnet cutoff.}
+classify probabilities strictly greater than 0.5 as positive.}
 }
 \value{
-A tibble with truth labels, probabilities and predicted classes.
+A tibble with truth labels, probabilities and predicted classes; \code{Class1} is the positive label 1, classified by probability strictly greater than the cutoff.
 }
 \description{
 Build a tidy prediction table

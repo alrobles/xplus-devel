@@ -1,0 +1,7 @@
+"package","available","version"
+"survival",TRUE,"3.8.6"
+"Matrix",TRUE,"1.7.4"
+"tibble",TRUE,"3.3.1"
+"glmnet",TRUE,"5.0"
+"pkgload",TRUE,"1.5.3"
+"testthat",TRUE,"3.3.2"

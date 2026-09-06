@@ -14,10 +14,14 @@
 #'   [glmnet::cv.glmnet()].
 #' @keywords internal
 stratified_foldid <- function(y, nfolds) {
+  y <- .xplus_binary_labels(y, length(y), require_both = TRUE)
+  .xplus_scalar(nfolds, "nfolds", 3, .Machine$integer.max, integer = TRUE)
+  if (min(table(y)) < nfolds) stop("`nfolds` cannot exceed the smaller class size.", call. = FALSE)
   foldid <- integer(length(y))
-  for (cls in unique(y)) {
+  for (cls in 0:1) {
     idx <- which(y == cls)
-    foldid[idx] <- sample(rep_len(seq_len(nfolds), length(idx)))
+    assignments <- rep_len(seq_len(nfolds), length(idx))
+    foldid[idx] <- assignments[sample.int(length(idx))]
   }
   foldid
 }

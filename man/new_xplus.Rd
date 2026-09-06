@@ -19,7 +19,21 @@ new_xplus(
   qq = numeric(),
   call = character(),
   max_iter = integer(),
-  stop_reason = character()
+  stop_reason = character(),
+  original_y = NULL,
+  final_labels = y,
+  fallback_used = NULL,
+  fallback_reason = NULL,
+  history = NULL,
+  sampling_counts = NULL,
+  draw_counts = NULL,
+  final_foldid = NULL,
+  cv_measure = NULL,
+  sigmoid_scale = NULL,
+  sampling = NULL,
+  min_iter = NULL,
+  stability_window = NULL,
+  min_coverage = NULL
 )
 }
 \arguments{
@@ -31,25 +45,25 @@ new_xplus(
 
 \item{predicted_coefficients}{Sparse coefficient matrix.}
 
-\item{n_iter}{Number of iterations executed.}
+\item{n_iter, history, sampling_counts, draw_counts}{Number of completed iterations, per-iteration diagnostics, and per-observation unlabeled inclusion-round and draw counts; optional diagnostics default to \code{NULL}.}
 
 \item{x}{Training feature matrix used to fit the model.}
 
-\item{y}{Final pseudo-label state used for final fitting.}
+\item{y, final_labels}{Identical actual target probabilities used for final fitting; \code{final_labels} defaults to \code{y}.}
 
 \item{alpha}{Elastic-net alpha used during fitting.}
 
 \item{learning_rate}{Learning rate used during pseudo-label updates.}
 
-\item{pseudo_labels}{Final pseudo-label probabilities.}
+\item{pseudo_labels, original_y, fallback_used, fallback_reason}{Proposed probabilities before fallback, original numeric binary labels, fallback flag and reason (empty if unused); optional metadata default to \code{NULL} for legacy bundles.}
 
-\item{iterative_path}{Internal iterative path used for pseudo-label updates.}
+\item{iterative_path, final_foldid, cv_measure, sigmoid_scale, sampling}{Iterative path and optional final cross-validation folds, measure (\code{deviance} or \code{auc}), positive sigmoid scale, and sampling mode (\code{bootstrap} or \code{unique}); optional controls default to \code{NULL}.}
 
 \item{qq}{Quantile parameter used for cutoff calibration.}
 
 \item{call}{Original function call.}
 
-\item{max_iter}{Maximum number of iterations configured for fitting.}
+\item{max_iter, min_iter, stability_window, min_coverage}{Maximum iterations and optional minimum iterations, consecutive stability rounds, and unlabeled coverage required for stopping; optional controls default to \code{NULL}.}
 
 \item{stop_reason}{Reason fitting stopped: \code{"max_iter"}, \code{"label_stability"},
 \code{"budget_exhausted"}, or \code{"degenerate_labels"} (the pseudo-labels of the
