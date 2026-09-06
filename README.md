@@ -11,7 +11,6 @@ Install the production version from the production repository:
 remotes::install_github("alrobles/xplus-devel")
 ```
 
-Development, audit harnesses and historical baselines live in the development repository <https://github.com/alrobles/xplus-develeopment>.
 
 R >= 4.1.0 is required (the source uses the native pipe), and the declared minimum glmnet version is 4.1-8. The verification environment used R 4.5.2 and glmnet 5.0; the dependency minimum is not a claim that other versions have been tested.
 
