@@ -3,12 +3,6 @@
 #' @param xplus_object An object of class `"xplus"`.
 #'
 #' @return The validated `xplus` object.
-#' @examples
-#' \dontrun{
-#' fit <- glmnet::cv.glmnet(matrix(rnorm(50), ncol = 5), c(rep(1, 5), rep(0, 5)), family = "binomial")
-#' obj <- new_xplus(fit_xplus = fit, pred_y = matrix(0.5, 10, 1), cutoff = 0.5)
-#' validate_xplus(obj)
-#' }
 #' @keywords internal
 validate_xplus <- function(xplus_object) {
   fail <- function(message) stop(message, call. = FALSE)

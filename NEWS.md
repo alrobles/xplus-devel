@@ -1,3 +1,17 @@
+# xplus 1.0.2
+
+* Resubmission to CRAN. Fixed the reviewer notes from Konstanze Lauseker:
+  removed `\examples` from the unexported internal functions `new_xplus()`
+  and `validate_xplus()`; the package no longer uses `\dontrun{}` anywhere;
+  and `xplus()` no longer reads or writes `.GlobalEnv` directly (the optional
+  `seed` argument uses a plain `set.seed()` call).
+
+# xplus 1.0.1
+
+* Resubmission to CRAN. Fixed NOTEs reported in the incoming pre-test:
+  reworded `Description` to avoid false-positive spelling flags and removed
+  the private development repository URL from `NEWS.md` and `README.md`.
+
 # xplus 1.0.0
 
 This is a major, breaking upgrade of the PLUS-derived package extensions, not

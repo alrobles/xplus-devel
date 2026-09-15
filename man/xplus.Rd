@@ -49,7 +49,7 @@ retain the package's global-update, hard-thresholded enhancement path.}
 
 \item{convergence_threshold}{Required stability score in \verb{(0, 1]}, evaluated before learning-rate damping.}
 
-\item{seed}{Optional nonnegative integer seed, isolated from the caller's RNG stream.}
+\item{seed}{Integer or \code{NULL}. Random seed for reproducibility, applied via \code{set.seed()}. Default \code{NULL} (no seed).}
 
 \item{sigmoid_scale, degenerate_threshold}{Positive sigmoid scale and nonnegative residual-clamping tolerance.}
 

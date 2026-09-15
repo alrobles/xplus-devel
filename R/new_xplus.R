@@ -20,11 +20,6 @@
 #'
 #' @return An object of class `"xplus"`.
 #' @seealso [validate_xplus()]
-#' @examples
-#' \dontrun{
-#' fit <- glmnet::cv.glmnet(matrix(rnorm(50), ncol = 5), c(rep(1, 5), rep(0, 5)), family = "binomial")
-#' obj <- new_xplus(fit_xplus = fit, pred_y = matrix(0.5, 10, 1), cutoff = 0.5)
-#' }
 #' @keywords internal
 new_xplus <- function(
   fit_xplus = list(),

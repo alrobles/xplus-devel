@@ -23,12 +23,14 @@ test_that("small learning rates cannot claim one-step convergence", {
   }
 })
 
-test_that("explicit seeds do not reset the caller RNG stream", {
+test_that("explicit seeds drive the global RNG stream", {
   d <- core_fixture()
   set.seed(452)
-  before <- .Random.seed
-  suppressWarnings(xplus(d$x, d$y, max_iter = 2, seed = 17))
-  expect_identical(.Random.seed, before)
+  a <- suppressWarnings(xplus(d$x, d$y, max_iter = 2, seed = 17))
+  set.seed(452)
+  set.seed(17)
+  b <- suppressWarnings(xplus(d$x, d$y, max_iter = 2, seed = NULL))
+  expect_identical(a$pred_y, b$pred_y)
 })
 
 test_that("final soft targets and fallback provenance are truthful", {

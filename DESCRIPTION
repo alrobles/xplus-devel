@@ -1,6 +1,6 @@
 Package: xplus
 Title: Positive and Unlabeled Learning from Unbalanced Cases and Sparse Structures
-Version: 1.0.0
+Version: 1.0.2
 Authors@R: 
     person("Angel", "Robles", , "a.l.robles.fernandez@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-4674-4270"))

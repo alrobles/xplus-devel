@@ -15,7 +15,7 @@
 #' @param nfolds Requested CV folds, an integer at least three; reduced for small classes.
 #' @param max_iter Maximum number of pseudo-labeling iterations.
 #' @param convergence_threshold Required stability score in `(0, 1]`, evaluated before learning-rate damping.
-#' @param seed Optional nonnegative integer seed, isolated from the caller's RNG stream.
+#' @param seed Integer or `NULL`. Random seed for reproducibility, applied via `set.seed()`. Default `NULL` (no seed).
 #' @param sigmoid_scale,degenerate_threshold Positive sigmoid scale and nonnegative residual-clamping tolerance.
 #' @details
 #' Core PLUS behavior alternates between fitting penalized logistic models on known
@@ -79,10 +79,6 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   if (!any(variances > 0)) stop("All feature columns have zero variance at numerical precision; rescale or change `x`.", call. = FALSE)
   if (!is.null(seed)) {
     .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
-    had_seed <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    old_seed <- if (had_seed) get(".Random.seed", envir = .GlobalEnv) else NULL
-    on.exit(if (had_seed) assign(".Random.seed", old_seed, envir = .GlobalEnv) else
-      rm(list = ".Random.seed", envir = .GlobalEnv), add = TRUE)
     set.seed(seed)
   }
   pseudo_labels <- as.numeric(y)
