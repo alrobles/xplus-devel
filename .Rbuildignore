@@ -5,3 +5,4 @@
 ^_pkgdown\.yml$
 ^\.github$
 ^cran-comments\.md$
+^vignettes/articles$
