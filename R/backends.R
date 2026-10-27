@@ -21,6 +21,17 @@
 #' @param label Human-readable backend label; defaults to `name`.
 #' @param uses_cv Logical scalar; whether `fit` performs internal
 #'   cross-validation whose measure is recorded in the iteration history.
+#' @param parameters Optional data frame declaring tunable hyperparameters
+#'   following the caret `modelInfo` convention (columns `parameter`,
+#'   `class`, and `label`); informational only, it enables future tuning
+#'   and AutoML adapters without changing the backend contract.
+#' @details The contract mirrors the minimal estimator interface shared by
+#'   caret `modelInfo` entries, sklearn `fit`/`predict_proba` estimators
+#'   (the basis of PU wrappers such as `ElkanotoPuClassifier`), and mlr3
+#'   `Learner` objects: fit weighted `(x, y)` data, then predict
+#'   probabilities. `xplus` additionally supplies `foldid` (stratified CV
+#'   folds for backends that use them) and soft fractional targets in the
+#'   final fit, which generic frameworks do not provide.
 #'
 #' @return An object of class `"xplus_backend"` accepted by the `backend`
 #'   argument of [xplus()].
@@ -35,7 +46,7 @@
 #'   backend = constant, max_iter = 3)
 #' @export
 xplus_backend <- function(name, fit, predict, importance = NULL, label = name,
-                          uses_cv = FALSE) {
+                          uses_cv = FALSE, parameters = NULL) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(trimws(name))) {
     stop("`name` must be a nonempty character scalar.", call. = FALSE)
   }
@@ -54,9 +65,16 @@ xplus_backend <- function(name, fit, predict, importance = NULL, label = name,
   if (!is.logical(uses_cv) || length(uses_cv) != 1L || is.na(uses_cv)) {
     stop("`uses_cv` must be TRUE or FALSE.", call. = FALSE)
   }
+  if (!is.null(parameters)) {
+    if (!is.data.frame(parameters) || !all(c("parameter", "class", "label") %in% names(parameters)) ||
+        any(!nzchar(parameters$parameter))) {
+      stop("`parameters` must be a data frame with nonempty `parameter`, `class`, and `label` columns.",
+           call. = FALSE)
+    }
+  }
   structure(
     list(name = name, label = label, fit = fit, predict = predict,
-         importance = importance, uses_cv = uses_cv),
+         importance = importance, uses_cv = uses_cv, parameters = parameters),
     class = "xplus_backend"
   )
 }
@@ -74,6 +92,9 @@ print.xplus_backend <- function(x, ...) {
   cat("Name:", x$name, "\n")
   cat("Internal cross-validation:", x$uses_cv, "\n")
   cat("Feature importance:", !is.null(x$importance), "\n")
+  if (!is.null(x$parameters) && nrow(x$parameters)) {
+    cat("Tunable parameters:", paste(x$parameters$parameter, collapse = ", "), "\n")
+  }
   invisible(x)
 }
 
@@ -99,6 +120,10 @@ xplus_backend_glmnet <- function(alpha = 1, cv_measure = c("deviance", "auc")) {
     name = "glmnet",
     label = "elastic-net logistic regression (cv.glmnet)",
     uses_cv = TRUE,
+    parameters = data.frame(
+      parameter = "alpha", class = "numeric",
+      label = "Elastic-net mixture", stringsAsFactors = FALSE
+    ),
     fit = function(x, y, foldid, weights) {
       step <- .xplus_cv_fit(x, y, foldid, alpha, cv_measure, weights)
       attr(step$fit, "xplus_cv_measure") <- step$measure
@@ -121,12 +146,13 @@ xplus_backend_glmnet <- function(alpha = 1, cv_measure = c("deviance", "auc")) {
 #' targets are supported natively. The backend performs no internal
 #' cross-validation; its hyperparameters are fixed at construction.
 #'
-#' @param num.trees Number of trees.
+#' @param trees Number of trees (ranger `num.trees`); the parsnip-harmonized
+#'   name is used so a parsnip bridge can map `rand_forest(trees = ...)` later.
 #' @param mtry Number of variables sampled per split; `NULL` uses the ranger
 #'   default.
-#' @param min.node.size,max.depth Forest complexity controls forwarded to
-#'   [ranger::ranger()].
-#' @param num.threads Threads per forest fit; `NULL` lets ranger choose.
+#' @param min_n Minimum node size (ranger `min.node.size`).
+#' @param max.depth,num.threads Engine-specific ranger controls forwarded
+#'   unchanged.
 #' @param seed Optional seed passed to each ranger fit. When `NULL`, one is
 #'   drawn from R's RNG per fit so that `xplus(seed = ...)` remains
 #'   reproducible.
@@ -137,15 +163,15 @@ xplus_backend_glmnet <- function(alpha = 1, cv_measure = c("deviance", "auc")) {
 #' @seealso [xplus_backend()], [xplus()]
 #' @examples
 #' \dontrun{
-#' fit <- xplus(x, y, backend = xplus_backend_ranger(num.trees = 1000))
+#' fit <- xplus(x, y, backend = xplus_backend_ranger(trees = 1000))
 #' }
 #' @export
-xplus_backend_ranger <- function(num.trees = 500, mtry = NULL, min.node.size = 1,
+xplus_backend_ranger <- function(trees = 500, mtry = NULL, min_n = 1,
                                  max.depth = 0, num.threads = 1, seed = NULL,
                                  importance.mode = c("impurity", "permutation", "none")) {
-  .xplus_scalar(num.trees, "num.trees", 1, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(trees, "trees", 1, .Machine$integer.max, integer = TRUE)
   if (!is.null(mtry)) .xplus_scalar(mtry, "mtry", 1, .Machine$integer.max, integer = TRUE)
-  .xplus_scalar(min.node.size, "min.node.size", 0, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(min_n, "min_n", 0, .Machine$integer.max, integer = TRUE)
   .xplus_scalar(max.depth, "max.depth", 0, .Machine$integer.max, integer = TRUE)
   if (!is.null(num.threads)) .xplus_scalar(num.threads, "num.threads", 1, .Machine$integer.max, integer = TRUE)
   if (!is.null(seed)) .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
@@ -154,6 +180,13 @@ xplus_backend_ranger <- function(num.trees = 500, mtry = NULL, min.node.size = 1
     name = "ranger",
     label = "random forest (ranger)",
     uses_cv = FALSE,
+    parameters = data.frame(
+      parameter = c("trees", "mtry", "min_n"),
+      class = "integer",
+      label = c("Number of trees", "Randomly selected predictors",
+                "Minimal node size"),
+      stringsAsFactors = FALSE
+    ),
     fit = function(x, y, foldid, weights) {
       if (!requireNamespace("ranger", quietly = TRUE)) {
         stop("The 'ranger' backend requires the ranger package to be installed.", call. = FALSE)
@@ -161,8 +194,8 @@ xplus_backend_ranger <- function(num.trees = 500, mtry = NULL, min.node.size = 1
       frame <- .xplus_backend_frame(x)
       features <- colnames(x)
       rf_seed <- if (is.null(seed)) sample.int(.Machine$integer.max, 1L) else seed
-      args <- list(x = frame, num.trees = num.trees, mtry = mtry,
-                   min.node.size = min.node.size, max.depth = max.depth,
+      args <- list(x = frame, num.trees = trees, mtry = mtry,
+                   min.node.size = min_n, max.depth = max.depth,
                    case.weights = weights, num.threads = num.threads,
                    seed = rf_seed, importance = importance.mode,
                    keep.inbag = FALSE, verbose = FALSE)
@@ -226,6 +259,10 @@ xplus_backend_gam <- function(k = NULL, method = "REML", max_features = 100) {
     name = "gam",
     label = "generalized additive model (mgcv::gam)",
     uses_cv = FALSE,
+    parameters = data.frame(
+      parameter = "k", class = "integer",
+      label = "Smooth basis dimension", stringsAsFactors = FALSE
+    ),
     fit = function(x, y, foldid, weights) {
       if (!requireNamespace("mgcv", quietly = TRUE)) {
         stop("The 'gam' backend requires the mgcv package to be installed.", call. = FALSE)

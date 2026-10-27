@@ -5,9 +5,9 @@
 \title{Ranger random-forest backend for xplus}
 \usage{
 xplus_backend_ranger(
-  num.trees = 500,
+  trees = 500,
   mtry = NULL,
-  min.node.size = 1,
+  min_n = 1,
   max.depth = 0,
   num.threads = 1,
   seed = NULL,
@@ -15,15 +15,16 @@ xplus_backend_ranger(
 )
 }
 \arguments{
-\item{num.trees}{Number of trees.}
+\item{trees}{Number of trees (ranger \code{num.trees}); the parsnip-harmonized
+name is used so a parsnip bridge can map \code{rand_forest(trees = ...)} later.}
 
 \item{mtry}{Number of variables sampled per split; \code{NULL} uses the ranger
 default.}
 
-\item{min.node.size, max.depth}{Forest complexity controls forwarded to
-\code{\link[ranger:ranger]{ranger::ranger()}}.}
+\item{min_n}{Minimum node size (ranger \code{min.node.size}).}
 
-\item{num.threads}{Threads per forest fit; \code{NULL} lets ranger choose.}
+\item{max.depth, num.threads}{Engine-specific ranger controls forwarded
+unchanged.}
 
 \item{seed}{Optional seed passed to each ranger fit. When \code{NULL}, one is
 drawn from R's RNG per fit so that \code{xplus(seed = ...)} remains
@@ -43,7 +44,7 @@ cross-validation; its hyperparameters are fixed at construction.
 }
 \examples{
 \dontrun{
-fit <- xplus(x, y, backend = xplus_backend_ranger(num.trees = 1000))
+fit <- xplus(x, y, backend = xplus_backend_ranger(trees = 1000))
 }
 }
 \seealso{

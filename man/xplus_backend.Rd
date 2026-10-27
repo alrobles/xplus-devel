@@ -10,7 +10,8 @@ xplus_backend(
   predict,
   importance = NULL,
   label = name,
-  uses_cv = FALSE
+  uses_cv = FALSE,
+  parameters = NULL
 )
 }
 \arguments{
@@ -35,6 +36,11 @@ returning a named numeric vector of feature scores, or \code{NULL}.}
 
 \item{uses_cv}{Logical scalar; whether \code{fit} performs internal
 cross-validation whose measure is recorded in the iteration history.}
+
+\item{parameters}{Optional data frame declaring tunable hyperparameters
+following the caret \code{modelInfo} convention (columns \code{parameter},
+\code{class}, and \code{label}); informational only, it enables future tuning
+and AutoML adapters without changing the backend contract.}
 }
 \value{
 An object of class \code{"xplus_backend"} accepted by the \code{backend}
@@ -45,6 +51,15 @@ Describe a learner that \code{\link[=xplus]{xplus()}} uses for both the iterativ
 fits and the final model. Built-in backends are \code{\link[=xplus_backend_glmnet]{xplus_backend_glmnet()}},
 \code{\link[=xplus_backend_ranger]{xplus_backend_ranger()}}, and \code{\link[=xplus_backend_gam]{xplus_backend_gam()}}; this constructor defines
 custom learners with the same contract.
+}
+\details{
+The contract mirrors the minimal estimator interface shared by
+caret \code{modelInfo} entries, sklearn \code{fit}/\code{predict_proba} estimators
+(the basis of PU wrappers such as \code{ElkanotoPuClassifier}), and mlr3
+\code{Learner} objects: fit weighted \verb{(x, y)} data, then predict
+probabilities. \code{xplus} additionally supplies \code{foldid} (stratified CV
+folds for backends that use them) and soft fractional targets in the
+final fit, which generic frameworks do not provide.
 }
 \examples{
 constant <- xplus_backend(

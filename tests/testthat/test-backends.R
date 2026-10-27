@@ -100,11 +100,12 @@ test_that("the gam backend fits and predicts probabilities", {
 test_that("backend objects carry their own hyperparameters", {
   skip_if_not_installed("ranger")
   sim <- simulate_pu_data(n = 200, p = 5, seed = 4, label_propensity = 0.7)
-  backend <- xplus_backend_ranger(num.trees = 50, importance.mode = "none")
+  backend <- xplus_backend_ranger(trees = 50, importance.mode = "none")
 
   fit <- xplus(sim$x, sim$y, backend = backend, max_iter = 4, seed = 4)
 
   expect_equal(fit$xplus$model$num.trees, 50)
+  expect_true(all(c("trees", "mtry", "min_n") %in% fit$backend$parameters$parameter))
   expect_null(get_importance(fit))
 })
 
