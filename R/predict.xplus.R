@@ -2,7 +2,7 @@
 #'
 #' @param object An `xplus` object.
 #' @param newx Optional finite numeric feature matrix; defaults to training data. Named training features must match and are reordered automatically.
-#' @param s Exact penalty name (`"lambda.min"`, `"lambda.1se"`) or finite nonnegative numeric lambda vector. Cache-only objects support only `"lambda.min"`.
+#' @param s Exact penalty name (`"lambda.min"`, `"lambda.1se"`) or finite nonnegative numeric lambda vector. Cache-only objects support only `"lambda.min"`. Only applies to the `"glmnet"` backend; other backends accept only the default `"lambda.min"`, which is ignored.
 #' @param type Prediction type: `"response"`, `"link"`, or `"class"`.
 #' @param ... Additional arguments are not supported and cause an error.
 #'
@@ -31,8 +31,17 @@ predict.xplus <- function(object, newx = NULL, s = "lambda.min", type = "respons
   if (!named_lambda && !numeric_lambda) {
     stop("`s` must be exactly 'lambda.min' or 'lambda.1se', or a finite nonnegative numeric lambda vector.", call. = FALSE)
   }
+  backend_name <- .xplus_backend_name(object)
+  if (backend_name != "glmnet" && !(named_lambda && s == "lambda.min")) {
+    stop(sprintf("`s` only applies to the 'glmnet' backend; this model uses '%s'.", backend_name), call. = FALSE)
+  }
+  has_model <- if (backend_name == "glmnet") {
+    !is.null(object$xplus$glmnet.fit)
+  } else {
+    !is.null(object$xplus) && length(object$xplus) > 0L
+  }
 
-  if (is.null(object$xplus$glmnet.fit) || is.null(object[["x"]])) {
+  if (!has_model || is.null(object[["x"]])) {
     if (!is.null(newx)) {
       stop("Predictions for `newx` require a fitted backend and training matrix.", call. = FALSE)
     }
@@ -48,14 +57,19 @@ predict.xplus <- function(object, newx = NULL, s = "lambda.min", type = "respons
     training <- .xplus_matrix(object$x)
     if (is.null(newx)) newx <- training
     newx <- .xplus_matrix(newx, reference = training, name = "newx")
-    lambda <- if (named_lambda) .xplus_scalar(object$xplus[[s]], s, lower = 0) else s
-    if (type == "link") {
-      return(stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "link"))
+    if (backend_name == "glmnet") {
+      lambda <- if (named_lambda) .xplus_scalar(object$xplus[[s]], s, lower = 0) else s
+      if (type == "link") {
+        return(stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "link"))
+      }
+      prob <- .xplus_probabilities(
+        stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "response"),
+        n = nrow(newx)
+      )
+    } else {
+      prob <- .xplus_backend_predict(object$backend, object$xplus, newx, nrow(newx))
+      if (type == "link") return(stats::qlogis(prob))
     }
-    prob <- .xplus_probabilities(
-      stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "response"),
-      n = nrow(newx)
-    )
   }
 
   if (type == "response") return(prob)

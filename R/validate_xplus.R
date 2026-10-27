@@ -34,24 +34,32 @@ validate_xplus <- function(xplus_object) {
   .xplus_matrix(values$x)
   n <- nrow(values$x)
   p <- ncol(values$x)
+  if (!is.null(values$backend) && !inherits(values$backend, "xplus_backend")) {
+    fail("`backend` must be NULL or an `xplus_backend` object.")
+  }
+  backend_name <- .xplus_backend_name(list(backend = values$backend))
   fit <- values$xplus
-  if (!inherits(fit, "cv.glmnet") || !is.list(fit) || !inherits(fit$glmnet.fit, "lognet") ||
-      !identical(as.integer(fit$glmnet.fit$nobs), n) || length(fit$glmnet.fit$dim) != 2L ||
-      fit$glmnet.fit$dim[1] != p) fail("`xplus` must be a binomial cv.glmnet fit matching the training dimensions.")
-  if (!is.numeric(fit$lambda) || !length(fit$lambda) || any(!is.finite(fit$lambda)) || any(fit$lambda < 0)) {
-    fail("The fitted lambda path must contain finite nonnegative values.")
-  }
-  for (name in c("lambda.min", "lambda.1se")) {
-    .xplus_scalar(fit[[name]], paste0("xplus$", name), 0)
-    if (!fit[[name]] %in% fit$lambda) fail("Selected lambdas must occur in the fitted lambda path.")
-  }
-  for (name in c("cvm", "cvsd", "nzero")) {
-    if (!is.numeric(fit[[name]]) || length(fit[[name]]) != length(fit$lambda) || any(!is.finite(fit[[name]]))) {
-      fail("Cross-validation statistics must be finite and match the fitted lambda path.")
+  if (backend_name == "glmnet") {
+    if (!inherits(fit, "cv.glmnet") || !is.list(fit) || !inherits(fit$glmnet.fit, "lognet") ||
+        !identical(as.integer(fit$glmnet.fit$nobs), n) || length(fit$glmnet.fit$dim) != 2L ||
+        fit$glmnet.fit$dim[1] != p) fail("`xplus` must be a binomial cv.glmnet fit matching the training dimensions.")
+    if (!is.numeric(fit$lambda) || !length(fit$lambda) || any(!is.finite(fit$lambda)) || any(fit$lambda < 0)) {
+      fail("The fitted lambda path must contain finite nonnegative values.")
     }
+    for (name in c("lambda.min", "lambda.1se")) {
+      .xplus_scalar(fit[[name]], paste0("xplus$", name), 0)
+      if (!fit[[name]] %in% fit$lambda) fail("Selected lambdas must occur in the fitted lambda path.")
+    }
+    for (name in c("cvm", "cvsd", "nzero")) {
+      if (!is.numeric(fit[[name]]) || length(fit[[name]]) != length(fit$lambda) || any(!is.finite(fit[[name]]))) {
+        fail("Cross-validation statistics must be finite and match the fitted lambda path.")
+      }
+    }
+    if (any(fit$cvsd < 0)) fail("Cross-validation standard errors cannot be negative.")
+    counts(fit$nzero, "xplus$nzero", length(fit$lambda), p)
+  } else if (is.null(fit) || !length(fit)) {
+    fail("`xplus` must contain the fitted backend model.")
   }
-  if (any(fit$cvsd < 0)) fail("Cross-validation standard errors cannot be negative.")
-  counts(fit$nzero, "xplus$nzero", length(fit$lambda), p)
   if (!is.matrix(values$pred_y) || !identical(dim(values$pred_y), c(n, 1L))) {
     fail("`pred_y` must be an n-observation by one probability matrix.")
   }
@@ -131,10 +139,14 @@ validate_xplus <- function(xplus_object) {
     for (name in c("sample_size", "sample_draws", "cv_folds")) counts(history[[name]], paste0("history$", name), values$n_iter)
     if (any(history$sample_size > n | history$sample_size < 1 | history$sample_draws < history$sample_size |
             history$cv_folds < 3 | history$cv_folds > n)) fail("History sample sizes, draw counts or fold counts are inconsistent.")
-    if (!is.character(history$cv_measure) || anyNA(history$cv_measure) || any(!history$cv_measure %in% c("deviance", "auc"))) {
-      fail("History CV measures must be deviance or auc.")
+    if (!is.character(history$cv_measure) || anyNA(history$cv_measure) || any(!history$cv_measure %in% c("deviance", "auc", "none"))) {
+      fail("History CV measures must be deviance, auc or none.")
     }
-    if (identical(values$cv_measure, "deviance") && any(history$cv_measure != "deviance")) fail("Deviance CV cannot record AUC fitting rounds.")
+    if (backend_name == "glmnet") {
+      if (identical(values$cv_measure, "deviance") && any(history$cv_measure != "deviance")) fail("Deviance CV cannot record AUC fitting rounds.")
+    } else if (any(history$cv_measure != "none")) {
+      fail("Non-glmnet backends cannot record deviance or AUC fitting rounds.")
+    }
     if (any(diff(history$coverage) < 0)) fail("History coverage must be nondecreasing.")
     if (values$n_iter > 0 && !is.null(values$original_y) && !is.null(values$sampling_counts)) {
       coverage <- mean(values$sampling_counts[!positive] > 0)

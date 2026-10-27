@@ -1,3 +1,21 @@
+# xplus (development version)
+
+* Pluggable fitting backends: `xplus()` gains a `backend` argument accepting
+  `"glmnet"` (default, historical behavior), `"ranger"`, `"gam"`, or a custom
+  `xplus_backend()` spec with `fit`/`predict` functions. `alpha` and
+  `cv_measure` configure the glmnet backend only; non-CV backends record
+  `"none"` in `history$cv_measure`.
+* New backend constructors `xplus_backend_glmnet()`, `xplus_backend_ranger()`,
+  and `xplus_backend_gam()`; `ranger` and `mgcv` move to `Suggests`.
+* New `get_importance()` returning backend feature scores (elastic-net
+  coefficients for glmnet, variable importance for ranger, smooth-term
+  significance for gam). `coef()` remains glmnet-only.
+* New `simulate_pu_data()` synthetic PU generator with linear, interaction and
+  nonlinear boundaries under SCAR labeling for benchmark experiments.
+* `predict()` accepts non-glmnet backends; `s` stays glmnet-specific.
+  `summary()`/`print()` report the backend; `predicted_coefficients` is a
+  sparse zero column for backends without coefficients.
+
 # xplus 1.0.2
 
 * Resubmission to CRAN. Fixed the reviewer notes from Konstanze Lauseker:

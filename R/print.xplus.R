@@ -28,18 +28,21 @@ print.xplus <- function(x, digits = max(3, getOption("digits") - 3), ...) {
     cat("Final soft targets:", sum(x$y > 0 & x$y < 1), "\n")
   }
   if (!is.null(x$cv_measure)) cat("CV measure:", x$cv_measure, "\n")
+  cat("Backend:", .xplus_backend_name(x), "\n")
   cat("Cutoff:", format(x$cutoff, digits = digits), "\n\n")
 
-  opt_lams <- c(x$xplus$lambda.min, x$xplus$lambda.1se)
-  which_idx <- match(opt_lams, x$xplus$lambda)
-  mat <- cbind(
-    Lambda = opt_lams,
-    Index = which_idx,
-    Measure = x$xplus$cvm[which_idx],
-    SE = x$xplus$cvsd[which_idx],
-    Nonzero = x$xplus$nzero[which_idx]
-  )
-  rownames(mat) <- c("min", "1se")
-  print(data.frame(mat, check.names = FALSE), digits = digits)
+  if (.xplus_backend_name(x) == "glmnet" && inherits(x$xplus, "cv.glmnet")) {
+    opt_lams <- c(x$xplus$lambda.min, x$xplus$lambda.1se)
+    which_idx <- match(opt_lams, x$xplus$lambda)
+    mat <- cbind(
+      Lambda = opt_lams,
+      Index = which_idx,
+      Measure = x$xplus$cvm[which_idx],
+      SE = x$xplus$cvsd[which_idx],
+      Nonzero = x$xplus$nzero[which_idx]
+    )
+    rownames(mat) <- c("min", "1se")
+    print(data.frame(mat, check.names = FALSE), digits = digits)
+  }
   invisible(x)
 }
