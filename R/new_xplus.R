@@ -14,6 +14,8 @@
 #' @param qq Quantile parameter used for cutoff calibration.
 #' @param call Original function call.
 #' @param max_iter,min_iter,stability_window,min_coverage Maximum iterations and optional minimum iterations, consecutive stability rounds, and unlabeled coverage required for stopping; optional controls default to `NULL`.
+#' @param backend [xplus_backend()] spec used for the fits; `NULL` denotes a
+#'   legacy object fitted before backend support, equivalent to `"glmnet"`.
 #' @param stop_reason Reason fitting stopped: `"max_iter"`, `"label_stability"`,
 #'   `"budget_exhausted"`, or `"degenerate_labels"` (the pseudo-labels of the
 #'   iterative training subset collapsed to a single class).
@@ -50,7 +52,8 @@ new_xplus <- function(
   sampling = NULL,
   min_iter = NULL,
   stability_window = NULL,
-  min_coverage = NULL
+  min_coverage = NULL,
+  backend = NULL
 ) {
   predicted_coefficients <- methods::as(
     methods::as(methods::as(Matrix::Matrix(predicted_coefficients, sparse = TRUE), "dMatrix"), "generalMatrix"),
@@ -87,7 +90,8 @@ new_xplus <- function(
       sampling = sampling,
       min_iter = min_iter,
       stability_window = stability_window,
-      min_coverage = min_coverage
+      min_coverage = min_coverage,
+      backend = backend
     ),
     class = "xplus"
   )

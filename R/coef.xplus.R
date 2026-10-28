@@ -1,5 +1,8 @@
 #' Extract coefficients from an xplus model
 #'
+#' Only defined for models fitted with the `"glmnet"` backend; for other
+#' backends use [get_importance()] instead.
+#'
 #' @param object An `xplus` object.
 #' @param s Penalty value name or numeric lambda.
 #' @param ... Additional arguments.
@@ -15,5 +18,10 @@
 #' @method coef xplus
 #' @export
 coef.xplus <- function(object, s = "lambda.min", ...) {
+  backend_name <- .xplus_backend_name(object)
+  if (backend_name != "glmnet") {
+    stop(sprintf("coef() is only defined for the 'glmnet' backend; '%s' models expose feature scores via get_importance().",
+                 backend_name), call. = FALSE)
+  }
   glmnet::coef.glmnet(object$xplus, s = s, ...)
 }

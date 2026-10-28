@@ -34,9 +34,13 @@
 #' Final-fit fallback is based on effective class mass, not thresholded labels,
 #' and is recorded with the actual fitting targets and the iteration history.
 #' @param sampling,cv_measure Sampling convention (`"bootstrap"` or `"unique"`) and CV criterion (`"deviance"` or `"auc"`); deviance is the default for both fitting stages.
+#' @param backend Learner for the iterative and final fits: one of `"glmnet"`,
+#'   `"ranger"`, `"gam"`, `"xgboost"`, `"lightgbm"`, or an [xplus_backend()]
+#'   object for custom backends.
+#'   `alpha` and `cv_measure` only configure the `"glmnet"` backend.
 #' @return An object of class `"xplus"` containing predictions, original and final labels, pseudo-labels, fallback metadata, sampling counts, and history.
 #' @references Zhou et al. (2022). doi:10.1371/journal.pcbi.1009956
-#' @seealso [predict.xplus()], [summary.xplus()], [assess.xplus()]
+#' @seealso [predict.xplus()], [summary.xplus()], [assess.xplus()], [xplus_backend()]
 #' @examples
 #' set.seed(1)
 #' x <- matrix(rnorm(200 * 10), ncol = 10)
@@ -48,7 +52,7 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
                   convergence_threshold = 0.9, seed = NULL, sigmoid_scale = 10,
                   min_iter = 5, stability_window = 5, min_coverage = 0.9,
                   sampling = c("bootstrap", "unique"), cv_measure = c("deviance", "auc"),
-                  degenerate_threshold = 1e-6) {
+                  degenerate_threshold = 1e-6, backend = "glmnet") {
   this.call <- match.call()
   x <- .xplus_matrix(x)
   y <- .xplus_binary_labels(y, nrow(x), require_both = TRUE)
@@ -67,6 +71,11 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) stop("`verbose` must be TRUE or FALSE.", call. = FALSE)
   sampling <- match.arg(sampling)
   cv_measure <- match.arg(cv_measure)
+  backend <- .xplus_resolve_backend(backend, alpha, cv_measure)
+  if (sampling == "bootstrap" && !isTRUE(backend$supports_weights)) {
+    warning(sprintf("Backend '%s' declares `supports_weights = FALSE`; bootstrap multiplicities are passed but will be silently ignored by this learner.",
+                    backend$name), call. = FALSE)
+  }
   n <- nrow(x)
   original_y <- y
   positive_id <- which(y == 1L)
@@ -122,9 +131,8 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
     weights <- if (sampling == "bootstrap") c(rep(1, length(positive_id)), frequency[sample_id]) else rep(1, length(fit_id))
     folds <- as.integer(min(nfolds, min(class_counts)))
     foldid <- stratified_foldid(y[fit_id], folds)
-    step <- .xplus_cv_fit(x[fit_id, , drop = FALSE], y[fit_id], foldid, alpha, cv_measure, weights)
-    fit_pi <- step$fit
-    pred_y <- .xplus_probabilities(stats::predict(fit_pi, newx = x, s = "lambda.min", type = "response"), n)
+    step <- .xplus_backend_fit(backend, x[fit_id, , drop = FALSE], y[fit_id], foldid, weights)
+    pred_y <- .xplus_backend_predict(backend, step$model, x, n)
     cutoff <- stats::quantile(pred_y[positive_id], qq, names = FALSE)
     map_pred_y <- normalize_residuals(pred_y - cutoff, degenerate_threshold)
     mapped <- as.numeric(stats::plogis(sigmoid_scale * map_pred_y))
@@ -171,17 +179,29 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   targets <- .xplus_final_targets(pseudo_labels, original_y, final_foldid)
   if (targets$fallback_used) warning(paste("Final fit reverted to original labels:", targets$reason), call. = FALSE)
   final_labels <- targets$labels
-  final_step <- .xplus_cv_fit(x, final_labels, final_foldid, alpha, cv_measure)
-  fit_pi <- final_step$fit
-  pred_y <- .xplus_probabilities(stats::predict(fit_pi, newx = x, s = "lambda.min", type = "response"), n)
+  if (!all(final_labels %in% c(0, 1)) && !isTRUE(backend$supports_fractional)) {
+    stop(sprintf("Backend '%s' declares `supports_fractional = FALSE` but the final pseudo-label targets are fractional; choose a learner that handles regression targets.",
+                 backend$name), call. = FALSE)
+  }
+  final_step <- .xplus_backend_fit(backend, x, final_labels, final_foldid, rep(1, n))
+  fit_pi <- final_step$model
+  # Stored predictions and the cutoff use honest (e.g. out-of-bag) scores
+  # where the backend provides them; in-sample memorized probabilities would
+  # push the positive quantile cutoff above any reachable score.
+  pred_y <- .xplus_backend_fit_predict(backend, fit_pi, x)
   cutoff <- stats::quantile(pred_y[positive_id], qq, names = FALSE)
-  pred_coef1 <- stats::coef(fit_pi, s = "lambda.min")
+  pred_coef1 <- if (backend$name == "glmnet") {
+    stats::coef(fit_pi, s = "lambda.min")
+  } else {
+    Matrix::sparseMatrix(i = integer(), j = integer(), dims = c(ncol(x) + 1L, 1L))
+  }
   if (any(!is.finite(as.numeric(pred_coef1)))) stop("Final fitting produced non-finite coefficients.", call. = FALSE)
   history <- if (length(history)) do.call(rbind, history) else
     data.frame(iteration = integer(), stability = numeric(), coverage = numeric(),
       sample_size = integer(), sample_draws = integer(), cv_folds = integer(),
       cv_measure = character(), max_label_change = numeric())
-  if (cv_measure == "auc" && (any(history$cv_measure != "auc") || final_step$measure != "auc")) {
+  if (backend$uses_cv && cv_measure == "auc" &&
+      (any(history$cv_measure != "auc") || final_step$measure != "auc")) {
     warning("AUC CV requires at least 10 observations per fold; affected fits used deviance, recorded in history.", call. = FALSE)
   }
   xplus_model <- new_xplus(fit_xplus = fit_pi, pred_y = pred_y, cutoff = cutoff,
@@ -193,7 +213,8 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
     fallback_reason = targets$reason, history = history, sampling_counts = sampling_counts,
     draw_counts = draw_counts, final_foldid = final_foldid, cv_measure = cv_measure,
     sigmoid_scale = sigmoid_scale, sampling = sampling, min_iter = min_iter,
-    stability_window = stability_window, min_coverage = min_coverage)
+    stability_window = stability_window, min_coverage = min_coverage,
+    backend = backend)
   validate_xplus(xplus_model)
 }
 

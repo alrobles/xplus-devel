@@ -22,7 +22,8 @@ xplus(
   min_coverage = 0.9,
   sampling = c("bootstrap", "unique"),
   cv_measure = c("deviance", "auc"),
-  degenerate_threshold = 1e-06
+  degenerate_threshold = 1e-06,
+  backend = "glmnet"
 )
 }
 \arguments{
@@ -68,6 +69,11 @@ Final-fit fallback is based on effective class mass, not thresholded labels,
 and is recorded with the actual fitting targets and the iteration history.}
 
 \item{sampling, cv_measure}{Sampling convention (\code{"bootstrap"} or \code{"unique"}) and CV criterion (\code{"deviance"} or \code{"auc"}); deviance is the default for both fitting stages.}
+
+\item{backend}{Learner for the iterative and final fits: one of \code{"glmnet"},
+\code{"ranger"}, \code{"gam"}, \code{"xgboost"}, \code{"lightgbm"}, or an \code{\link[=xplus_backend]{xplus_backend()}}
+object for custom backends.
+\code{alpha} and \code{cv_measure} only configure the \code{"glmnet"} backend.}
 }
 \value{
 An object of class \code{"xplus"} containing predictions, original and final labels, pseudo-labels, fallback metadata, sampling counts, and history.
@@ -90,5 +96,5 @@ fit <- xplus(x, y, max_iter = 20)
 Zhou et al. (2022). doi:10.1371/journal.pcbi.1009956
 }
 \seealso{
-\code{\link[=predict.xplus]{predict.xplus()}}, \code{\link[=summary.xplus]{summary.xplus()}}, \code{\link[=assess.xplus]{assess.xplus()}}
+\code{\link[=predict.xplus]{predict.xplus()}}, \code{\link[=summary.xplus]{summary.xplus()}}, \code{\link[=assess.xplus]{assess.xplus()}}, \code{\link[=xplus_backend]{xplus_backend()}}
 }

@@ -11,7 +11,7 @@
 
 \item{newx}{Optional finite numeric feature matrix; defaults to training data. Named training features must match and are reordered automatically.}
 
-\item{s}{Exact penalty name (\code{"lambda.min"}, \code{"lambda.1se"}) or finite nonnegative numeric lambda vector. Cache-only objects support only \code{"lambda.min"}.}
+\item{s}{Exact penalty name (\code{"lambda.min"}, \code{"lambda.1se"}) or finite nonnegative numeric lambda vector. Cache-only objects support only \code{"lambda.min"}. Only applies to the \code{"glmnet"} backend; other backends accept only the default \code{"lambda.min"}, which is ignored.}
 
 \item{type}{Prediction type: \code{"response"}, \code{"link"}, or \code{"class"}.}
 

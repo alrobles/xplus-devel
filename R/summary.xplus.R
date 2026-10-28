@@ -15,21 +15,24 @@
 #' @method summary xplus
 #' @export
 summary.xplus <- function(object, ...) {
-  n_nonzero <- sum(as.matrix(object$predicted_coefficients) != 0)
+  backend_name <- .xplus_backend_name(object)
   out <- list(
     n_obs = nrow(object$x),
     n_features = ncol(object$x),
     n_iter = object$n_iter,
     cutoff = object$cutoff,
+    backend = backend_name,
     alpha = object$alpha,
     learning_rate = object$learning_rate,
     iterative_path = object$iterative_path,
-    qq = object$qq,
-    lambda_min = object$xplus$lambda.min,
-    lambda_1se = object$xplus$lambda.1se,
-    n_nonzero_coefficients = n_nonzero,
-    stop_reason = object$stop_reason
+    qq = object$qq
   )
+  if (backend_name == "glmnet") {
+    out$lambda_min <- object$xplus$lambda.min
+    out$lambda_1se <- object$xplus$lambda.1se
+    out$n_nonzero_coefficients <- sum(as.matrix(object$predicted_coefficients) != 0)
+  }
+  out$stop_reason <- object$stop_reason
   if (!is.null(object$original_y)) {
     out$n_original_positive <- sum(object$original_y == 1)
     out$n_original_unlabeled <- sum(object$original_y == 0)
@@ -77,9 +80,12 @@ print.summary.xplus <- function(x, ...) {
   if (!is.null(x$cv_measure)) cat("CV measure:", x$cv_measure, "\n")
   if (!is.null(x$sampling)) cat("Sampling:", x$sampling, "\n")
   if (!is.null(x$final_coverage)) cat("Unlabeled coverage:", x$final_coverage, "\n")
+  cat("Backend:", x$backend, "\n")
   cat("Cutoff:", x$cutoff, "\n")
-  cat("lambda.min:", x$lambda_min, "\n")
-  cat("lambda.1se:", x$lambda_1se, "\n")
-  cat("Non-zero coefficients:", x$n_nonzero_coefficients, "\n")
+  if (!is.null(x$lambda_min)) {
+    cat("lambda.min:", x$lambda_min, "\n")
+    cat("lambda.1se:", x$lambda_1se, "\n")
+    cat("Non-zero coefficients:", x$n_nonzero_coefficients, "\n")
+  }
   invisible(x)
 }

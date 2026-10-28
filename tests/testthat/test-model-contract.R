@@ -29,8 +29,8 @@ model_contract_fixture <- function(extended = FALSE) {
 test_that("legacy model bundles retain their valid interface", {
   object <- model_contract_fixture()
   expect_identical(xplus:::validate_xplus(object), object)
-  expect_named(summary(object), c("n_obs", "n_features", "n_iter", "cutoff", "alpha",
-    "learning_rate", "iterative_path", "qq", "lambda_min", "lambda_1se",
+  expect_named(summary(object), c("n_obs", "n_features", "n_iter", "cutoff", "backend",
+    "alpha", "learning_rate", "iterative_path", "qq", "lambda_min", "lambda_1se",
     "n_nonzero_coefficients", "stop_reason"))
 })
 

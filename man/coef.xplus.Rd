@@ -17,7 +17,8 @@
 A sparse coefficient matrix.
 }
 \description{
-Extract coefficients from an xplus model
+Only defined for models fitted with the \code{"glmnet"} backend; for other
+backends use \code{\link[=get_importance]{get_importance()}} instead.
 }
 \examples{
 set.seed(1)

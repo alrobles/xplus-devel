@@ -5,4 +5,6 @@
 ^_pkgdown\.yml$
 ^\.github$
 ^cran-comments\.md$
+^inst/benchmarks$
 ^vignettes/articles$
+^docs$
