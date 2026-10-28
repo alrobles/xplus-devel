@@ -28,9 +28,20 @@ Constructors expose learner hyperparameters with parsnip-harmonized
 names, e.g. `xplus_backend_ranger(trees = 1000, mtry = 4)` or
 `xplus_backend_xgboost(trees = 200, learn_rate = 0.05)`. `ranger`,
 `mgcv`, `xgboost`, and `lightgbm` are in `Suggests`, so install them to
-use those backends.
+use those backends. A sixth path wraps any `parsnip` model spec
+directly:
 
-[`library`](https://rdrr.io/r/base/library.html)`(`[`xplus`](https://github.com/alrobles/xplus-devel)`)`` ``#> Package 'xplus' version 1.0.2.9000`` ``#> Type 'citation("xplus")' for citing this R package in publications.`` ``sim`` ``<-`` `[`simulate_pu_data`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)`(``n ``=`` ``400``, p ``=`` ``8``, boundary ``=`` ``"nonlinear"``,`` `` prevalence ``=`` ``0.4``, label_propensity ``=`` ``0.5``, seed ``=`` ``11``)`` ``unl`` ``<-`` ``sim``$``y`` ``==`` ``0`` `` ``fit_glmnet`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` ``"glmnet"``, max_iter ``=`` ``30``, seed ``=`` ``3``)`` ``fit_ranger`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` `[`xplus_backend_ranger`](https://alrobles.github.io/xplus/reference/xplus_backend_ranger.md)`(``trees ``=`` ``300``)``,`` `` max_iter ``=`` ``30``, seed ``=`` ``3``)`` `` `[`data.frame`](https://rdrr.io/r/base/data.frame.html)`(`` `` backend ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``"glmnet"``, ``"ranger"``)``,`` `` auc_unlabeled ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(`[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_glmnet``)``)``[``unl``]``)``,`` `` `[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_ranger``)``)``[``unl``]``)``)``,`` `` cutoff ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``cutoff``, ``fit_ranger``$``cutoff``)``,`` `` n_iter ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``n_iter``, ``fit_ranger``$``n_iter``)`` ``)`` ``#> backend auc_unlabeled cutoff n_iter`` ``#> 1 glmnet 0.5000000 0.581250 12`` ``#> 2 ranger 0.8932671 0.140136 9`
+[`library`](https://rdrr.io/r/base/library.html)`(`[`parsnip`](https://github.com/tidymodels/parsnip)`)`` ``backend`` ``<-`` `[`rand_forest`](https://parsnip.tidymodels.org/reference/rand_forest.html)`(``trees ``=`` ``500``)`` ``|>`` `` `[`set_engine`](https://parsnip.tidymodels.org/reference/set_engine.html)`(``"ranger"``, importance ``=`` ``"impurity"``)`` ``|>`` `` `[`xplus_backend_parsnip`](https://alrobles.github.io/xplus/reference/xplus_backend_parsnip.md)`(``)`` ``fit`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``x``, ``y``, backend ``=`` ``backend``)`
+
+[`xplus_backend_parsnip()`](https://alrobles.github.io/xplus/reference/xplus_backend_parsnip.md)
+flips the spec’s mode per fit — classification on binary iterative
+targets, regression on the fractional final ones — maps case weights to
+`hardhat` weight vectors, injects engine seeds so `xplus(seed = ...)`
+stays reproducible, and reuses out-of-bag scores when the engine stores
+them. Specs whose model lacks a regression mode fail with a clear
+message at the final stage.
+
+[`library`](https://rdrr.io/r/base/library.html)`(`[`xplus`](https://alrobles.github.io/xplus/)`)`` ``#> Package 'xplus' version 1.0.2.9000`` ``#> Type 'citation("xplus")' for citing this R package in publications.`` ``sim`` ``<-`` `[`simulate_pu_data`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)`(``n ``=`` ``400``, p ``=`` ``8``, boundary ``=`` ``"nonlinear"``,`` `` prevalence ``=`` ``0.4``, label_propensity ``=`` ``0.5``, seed ``=`` ``11``)`` ``unl`` ``<-`` ``sim``$``y`` ``==`` ``0`` `` ``fit_glmnet`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` ``"glmnet"``, max_iter ``=`` ``30``, seed ``=`` ``3``)`` ``fit_ranger`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` `[`xplus_backend_ranger`](https://alrobles.github.io/xplus/reference/xplus_backend_ranger.md)`(``trees ``=`` ``300``)``,`` `` max_iter ``=`` ``30``, seed ``=`` ``3``)`` `` `[`data.frame`](https://rdrr.io/r/base/data.frame.html)`(`` `` backend ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``"glmnet"``, ``"ranger"``)``,`` `` auc_unlabeled ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(`[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_glmnet``)``)``[``unl``]``)``,`` `` `[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_ranger``)``)``[``unl``]``)``)``,`` `` cutoff ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``cutoff``, ``fit_ranger``$``cutoff``)``,`` `` n_iter ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``n_iter``, ``fit_ranger``$``n_iter``)`` ``)`` ``#> backend auc_unlabeled cutoff n_iter`` ``#> 1 glmnet 0.5000000 0.581250 12`` ``#> 2 ranger 0.8932671 0.140136 9`
 
 On a nonlinear boundary the elastic-net logistic fit collapses toward
 chance while the forest tracks the radial structure; on linear
@@ -122,9 +133,9 @@ calibration could not.
 The `parameters` field already declares tunable hyperparameters in caret
 `modelInfo` form (`trees`, `mtry`, `min_n` for ranger; `trees`,
 `learn_rate`, `tree_depth` for the boosting backends; `alpha` for
-glmnet; `k` for gam). It is informational today and is the seam for a
-parsnip-style tuning bridge — the contract only requires
-`fit`/`predict`, so kernel methods, neural learners or a `parsnip` model
-spec can be registered without touching
-[`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md)
-internals.
+glmnet; `k` for gam), and
+[`xplus_backend_parsnip()`](https://alrobles.github.io/xplus/reference/xplus_backend_parsnip.md)
+already bridges the tidymodels engine zoo. The remaining seam is learner
+selection: ranking backends and tuning their parameters needs evaluation
+metrics that stay honest without negative labels — the problem the
+`fit_predict` hook was built for.

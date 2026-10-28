@@ -22,6 +22,18 @@
   `xgb.cv`/`lgb.cv` on the xplus CV folds, the honest analogue of
   ranger’s out-of-bag predictions.
 - New
+  [`xplus_backend_parsnip()`](https://alrobles.github.io/xplus/reference/xplus_backend_parsnip.md)
+  adapter wrapping any `parsnip` model spec
+  (e.g. `rand_forest() |> set_engine("ranger")`) as an
+  [`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md)
+  backend: the spec’s mode flips between classification (binary
+  iterative targets) and regression (fractional final targets), case
+  weights map to
+  [`hardhat::frequency_weights()`](https://hardhat.tidymodels.org/reference/frequency_weights.html)/[`importance_weights()`](https://hardhat.tidymodels.org/reference/importance_weights.html),
+  engine seeds are injected for reproducibility, and `fit_predict`
+  reuses ranger out-of-bag scores when the engine stores them.
+  `parsnip`, `hardhat`, and `rlang` move to `Suggests`.
+- New
   [`get_importance()`](https://alrobles.github.io/xplus/reference/get_importance.md)
   returning backend feature scores (elastic-net coefficients for glmnet,
   variable importance for ranger, smooth-term significance for gam).

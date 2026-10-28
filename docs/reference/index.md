@@ -54,6 +54,8 @@
   : Elastic-net logistic backend for xplus
 - [`xplus_backend_lightgbm()`](https://alrobles.github.io/xplus/reference/xplus_backend_lightgbm.md)
   : LightGBM gradient-boosting backend for xplus
+- [`xplus_backend_parsnip()`](https://alrobles.github.io/xplus/reference/xplus_backend_parsnip.md)
+  : Parsnip model-spec backend for xplus
 - [`xplus_backend_ranger()`](https://alrobles.github.io/xplus/reference/xplus_backend_ranger.md)
   : Ranger random-forest backend for xplus
 - [`xplus_backend_xgboost()`](https://alrobles.github.io/xplus/reference/xplus_backend_xgboost.md)

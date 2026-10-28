@@ -26,10 +26,13 @@ Imports:
     utils
 Suggests:
     covr,
+    hardhat,
     knitr,
     lightgbm,
     mgcv,
+    parsnip,
     ranger (>= 0.14),
+    rlang,
     rmarkdown,
     survival,
     testthat (>= 3.0.0),

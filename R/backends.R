@@ -546,6 +546,123 @@ xplus_backend_gam <- function(k = NULL, method = "REML", max_features = 100) {
   )
 }
 
+#' Parsnip model-spec backend for xplus
+#'
+#' Wrap a [parsnip::model_spec] — e.g. `parsnip::rand_forest()` combined with
+#' [parsnip::set_engine()] — as an [xplus()] backend, giving the PLUS loop
+#' access to the full tidymodels engine zoo. The spec's mode is set per fit:
+#' `"classification"` when the target is binary (iterative pseudo-label fits),
+#' `"regression"` when fractional (the final fit), so the model must support
+#' both modes or `parsnip::fit_xy()` reports the gap. Case weights are passed
+#' as [hardhat::frequency_weights()] when integral and
+#' [hardhat::importance_weights()] otherwise; `foldid` is unused because
+#' parsnip specs carry no internal resampling.
+#'
+#' `fit_predict` returns out-of-bag scores when the underlying engine stores
+#' them on the fitted object (ranger engines) and falls back to in-sample
+#' `predict` otherwise, so honest cutoff calibration is preserved where the
+#' engine makes it possible. Engines that consume a `seed` argument
+#' (ranger, xgboost, lightgbm) get one drawn from R's RNG when the spec does
+#' not set it explicitly, keeping `xplus(seed = ...)` reproducible.
+#' Feature importance is read from the fitted engine object when present;
+#' declare it in the spec, e.g. `set_engine("ranger", importance = "impurity")`.
+#'
+#' @param spec A `parsnip` model specification produced by a model function
+#'   such as [parsnip::rand_forest()], [parsnip::boost_tree()] or
+#'   [parsnip::logistic_reg()], usually piped through [parsnip::set_engine()].
+#'   The engine must be set and its package installed.
+#'
+#' @return An `"xplus_backend"` object named `parsnip:<engine>`.
+#' @seealso [xplus_backend()], [xplus()], [xplus_backend_ranger()]
+#' @examples
+#' \dontrun{
+#' backend <- parsnip::rand_forest(trees = 500) |>
+#'   parsnip::set_engine("ranger") |>
+#'   xplus_backend_parsnip()
+#' fit <- xplus(x, y, backend = backend)
+#' }
+#' @export
+xplus_backend_parsnip <- function(spec) {
+  if (!inherits(spec, "model_spec")) {
+    stop("`spec` must be a parsnip model specification (class `model_spec`).",
+         call. = FALSE)
+  }
+  if (is.null(spec$engine) || !nzchar(spec$engine)) {
+    stop("`spec` must declare an engine; use `parsnip::set_engine()`.",
+         call. = FALSE)
+  }
+  engine <- spec$engine
+  xplus_backend(
+    name = paste0("parsnip:", engine),
+    label = sprintf("parsnip %s spec (engine '%s')", class(spec)[1], engine),
+    uses_cv = FALSE,
+    fit = function(x, y, foldid, weights) {
+      if (!requireNamespace("parsnip", quietly = TRUE)) {
+        stop("The parsnip backend requires the parsnip package to be installed.",
+             call. = FALSE)
+      }
+      frame <- .xplus_backend_frame(x)
+      binary <- all(y %in% c(0, 1))
+      fit_spec <- spec
+      fit_spec$mode <- if (binary) "classification" else "regression"
+      if (engine %in% c("ranger", "xgboost", "lightgbm") &&
+          !"seed" %in% names(fit_spec$eng_args)) {
+        fit_spec$eng_args$seed <- rlang::new_quosure(sample.int(.Machine$integer.max, 1L))
+      }
+      cw <- NULL
+      if (!is.null(weights)) {
+        cw <- if (all(weights == round(weights))) {
+          hardhat::frequency_weights(weights)
+        } else {
+          hardhat::importance_weights(weights)
+        }
+      }
+      target <- if (binary) factor(y, levels = c(0, 1)) else y
+      fit_obj <- tryCatch(
+        parsnip::fit_xy(fit_spec, x = frame, y = target,
+                        case_weights = cw,
+                        control = parsnip::control_parsnip(verbosity = 0)),
+        error = function(e) {
+          stop(sprintf("parsnip %s spec (engine '%s') failed in '%s' mode: %s",
+                       class(spec)[1], engine, fit_spec$mode,
+                       conditionMessage(e)), call. = FALSE)
+        }
+      )
+      structure(list(model = fit_obj,
+                     mode = fit_spec$mode,
+                     features = colnames(x)),
+                class = "xplus_parsnip_fit")
+    },
+    predict = function(model, newx) {
+      frame <- .xplus_backend_frame(newx)
+      if (model$mode == "classification") {
+        prob <- stats::predict(model$model, new_data = frame, type = "prob")
+        p <- prob[[".pred_1"]]
+      } else {
+        p <- stats::predict(model$model, new_data = frame,
+                            type = "numeric")[[".pred"]]
+      }
+      pmin(pmax(as.numeric(p), 0), 1)
+    },
+    fit_predict = function(model, x) {
+      eng <- model$model$fit
+      if (inherits(eng, "ranger")) {
+        prob <- eng$predictions
+        if (model$mode == "classification") prob <- prob[, "1"]
+        return(as.numeric(prob))
+      }
+      rep(NA_real_, nrow(x))
+    },
+    importance = function(model) {
+      eng <- model$model$fit
+      imp <- if (inherits(eng, "ranger")) eng$variable.importance else NULL
+      if (!length(imp)) return(NULL)
+      if (length(model$features) == length(imp)) names(imp) <- model$features
+      imp
+    }
+  )
+}
+
 # Resolve the `backend` argument of xplus() into a validated xplus_backend.
 # String names call the built-in constructors so the `alpha` and `cv_measure`
 # arguments apply to the default glmnet backend only.

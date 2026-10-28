@@ -271,3 +271,63 @@ test_that("get_importance falls back to glmnet coefficients for legacy objects",
   imp <- get_importance(fit)
   expect_true(is.numeric(imp) && length(imp) == ncol(x))
 })
+
+test_that("xplus_backend_parsnip validates its spec", {
+  skip_if_not_installed("parsnip")
+  expect_error(xplus_backend_parsnip(list()), "model_spec")
+  spec <- parsnip::rand_forest(trees = 50)
+  spec$engine <- ""
+  expect_error(xplus_backend_parsnip(spec), "set_engine")
+})
+
+test_that("the parsnip backend drives xplus with a ranger engine", {
+  skip_if_not_installed("parsnip")
+  skip_if_not_installed("ranger")
+  sim <- simulate_pu_data(n = 300, p = 6, boundary = "nonlinear", seed = 31,
+                          prevalence = 0.4, label_propensity = 0.5)
+  backend <- parsnip::rand_forest(trees = 100) |>
+    parsnip::set_engine("ranger", importance = "impurity") |>
+    xplus_backend_parsnip()
+
+  fit <- xplus(sim$x, sim$y, backend = backend, max_iter = 6, seed = 31)
+
+  expect_s3_class(fit, "xplus")
+  expect_equal(fit$backend$name, "parsnip:ranger")
+  expect_true(all(fit$history$cv_measure == "none"))
+  probs <- predict(fit)
+  expect_true(all(probs >= 0 & probs <= 1))
+  # OOB honest scores sit below memorized in-sample ones.
+  pos <- fit$original_y == 1
+  pred <- as.numeric(fit$pred_y)
+  insample <- as.numeric(.xplus_backend_predict(fit$backend, fit$xplus, sim$x))
+  expect_true(median(pred[pos]) < median(insample[pos]))
+  imp <- get_importance(fit)
+  expect_true(is.numeric(imp) && length(imp) == ncol(sim$x))
+})
+
+test_that("parsnip backend predictions are reproducible under xplus(seed)", {
+  skip_if_not_installed("parsnip")
+  skip_if_not_installed("ranger")
+  sim <- simulate_pu_data(n = 200, p = 5, seed = 33, label_propensity = 0.7)
+  backend <- function() {
+    parsnip::rand_forest(trees = 50) |>
+      parsnip::set_engine("ranger") |>
+      xplus_backend_parsnip()
+  }
+
+  a <- xplus(sim$x, sim$y, backend = backend(), max_iter = 4, seed = 37)
+  b <- xplus(sim$x, sim$y, backend = backend(), max_iter = 4, seed = 37)
+
+  expect_identical(as.numeric(a$pred_y), as.numeric(b$pred_y))
+})
+
+test_that("classification-only parsnip specs fail clearly on the final fit", {
+  skip_if_not_installed("parsnip")
+  sim <- simulate_pu_data(n = 150, p = 4, seed = 41, label_propensity = 0.7)
+  backend <- parsnip::logistic_reg() |>
+    parsnip::set_engine("glm") |>
+    xplus_backend_parsnip()
+
+  expect_error(xplus(sim$x, sim$y, backend = backend, max_iter = 2),
+               "regression")
+})

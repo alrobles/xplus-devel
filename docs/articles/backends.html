@@ -131,9 +131,23 @@ names, e.g. <code>xplus_backend_ranger(trees = 1000, mtry = 4)</code> or
 <code>xplus_backend_xgboost(trees = 200, learn_rate = 0.05)</code>.
 <code>ranger</code>, <code>mgcv</code>, <code>xgboost</code>, and
 <code>lightgbm</code> are in <code>Suggests</code>, so install them to
-use those backends.</p>
+use those backends. A sixth path wraps any <code>parsnip</code> model
+spec directly:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/alrobles/xplus-devel" class="external-link">xplus</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/parsnip" class="external-link">parsnip</a></span><span class="op">)</span></span>
+<span><span class="va">backend</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://parsnip.tidymodels.org/reference/rand_forest.html" class="external-link">rand_forest</a></span><span class="op">(</span>trees <span class="op">=</span> <span class="fl">500</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://parsnip.tidymodels.org/reference/set_engine.html" class="external-link">set_engine</a></span><span class="op">(</span><span class="st">"ranger"</span>, importance <span class="op">=</span> <span class="st">"impurity"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/xplus_backend_parsnip.html">xplus_backend_parsnip</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/xplus.html">xplus</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, backend <span class="op">=</span> <span class="va">backend</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/xplus_backend_parsnip.html">xplus_backend_parsnip()</a></code> flips the spec’s mode per fit —
+classification on binary iterative targets, regression on the fractional
+final ones — maps case weights to <code>hardhat</code> weight vectors,
+injects engine seeds so <code>xplus(seed = ...)</code> stays
+reproducible, and reuses out-of-bag scores when the engine stores them.
+Specs whose model lacks a regression mode fail with a clear message at
+the final stage.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://alrobles.github.io/xplus/">xplus</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Package 'xplus' version 1.0.2.9000</span></span>
 <span><span class="co">#&gt; Type 'citation("xplus")' for citing this R package in publications.</span></span>
 <span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_pu_data.html">simulate_pu_data</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">400</span>, p <span class="op">=</span> <span class="fl">8</span>, boundary <span class="op">=</span> <span class="st">"nonlinear"</span>,</span>
@@ -215,7 +229,7 @@ bridge</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">constant</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/xplus_backend.html">xplus_backend</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"constant"</span>,</span>
 <span>  fit <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">foldid</span>, <span class="va">weights</span><span class="op">)</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/weighted.mean.html" class="external-link">weighted.mean</a></span><span class="op">(</span><span class="va">y</span>, <span class="va">weights</span><span class="op">)</span>,</span>
@@ -252,7 +266,7 @@ evaluation matches what the model produces on unseen data.</p>
 backend on <code><a href="../reference/simulate_pu_data.html">simulate_pu_data()</a></code> boundaries (linear,
 interaction, nonlinear) and scores predictions against the hidden
 labels, overall and inside the unlabeled pool:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">Rscript</span> inst/benchmarks/backends/compare_backends.R <span class="pp">[</span><span class="ss">outdir</span><span class="pp">]</span> <span class="pp">[</span><span class="ss">reps</span><span class="pp">]</span> <span class="pp">[</span><span class="ss">quick</span><span class="pp">]</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">Rscript</span> inst/benchmarks/backends/compare_backends.R <span class="pp">[</span><span class="ss">outdir</span><span class="pp">]</span> <span class="pp">[</span><span class="ss">reps</span><span class="pp">]</span> <span class="pp">[</span><span class="ss">quick</span><span class="pp">]</span></span></code></pre></div>
 <p>Representative results (3 replicates, n = 1000, p = 12, prevalence
 0.4, label propensity 0.5):</p>
 <table class="table">
@@ -389,11 +403,11 @@ hyperparameters in caret <code>modelInfo</code> form
 (<code>trees</code>, <code>mtry</code>, <code>min_n</code> for ranger;
 <code>trees</code>, <code>learn_rate</code>, <code>tree_depth</code> for
 the boosting backends; <code>alpha</code> for glmnet; <code>k</code> for
-gam). It is informational today and is the seam for a parsnip-style
-tuning bridge — the contract only requires
-<code>fit</code>/<code>predict</code>, so kernel methods, neural
-learners or a <code>parsnip</code> model spec can be registered without
-touching <code><a href="../reference/xplus.html">xplus()</a></code> internals.</p>
+gam), and <code><a href="../reference/xplus_backend_parsnip.html">xplus_backend_parsnip()</a></code> already bridges the
+tidymodels engine zoo. The remaining seam is learner selection: ranking
+backends and tuning their parameters needs evaluation metrics that stay
+honest without negative labels — the problem the
+<code>fit_predict</code> hook was built for.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

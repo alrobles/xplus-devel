@@ -11,6 +11,14 @@
   move to `Suggests`. Boosting backends report out-of-fold `fit_predict`
   scores from `xgb.cv`/`lgb.cv` on the xplus CV folds, the honest analogue
   of ranger's out-of-bag predictions.
+* New `xplus_backend_parsnip()` adapter wrapping any `parsnip` model spec
+  (e.g. `rand_forest() |> set_engine("ranger")`) as an `xplus()` backend:
+  the spec's mode flips between classification (binary iterative targets)
+  and regression (fractional final targets), case weights map to
+  `hardhat::frequency_weights()`/`importance_weights()`, engine seeds are
+  injected for reproducibility, and `fit_predict` reuses ranger out-of-bag
+  scores when the engine stores them. `parsnip`, `hardhat`, and `rlang`
+  move to `Suggests`.
 * New `get_importance()` returning backend feature scores (elastic-net
   coefficients for glmnet, variable importance for ranger, smooth-term
   significance for gam). `coef()` remains glmnet-only.

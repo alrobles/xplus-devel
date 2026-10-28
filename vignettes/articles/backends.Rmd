@@ -30,7 +30,22 @@ Constructors expose learner hyperparameters with parsnip-harmonized names,
 e.g. `xplus_backend_ranger(trees = 1000, mtry = 4)` or
 `xplus_backend_xgboost(trees = 200, learn_rate = 0.05)`. `ranger`, `mgcv`,
 `xgboost`, and `lightgbm` are in `Suggests`, so install them to use those
-backends.
+backends. A sixth path wraps any `parsnip` model spec directly:
+
+```r
+library(parsnip)
+backend <- rand_forest(trees = 500) |>
+  set_engine("ranger", importance = "impurity") |>
+  xplus_backend_parsnip()
+fit <- xplus(x, y, backend = backend)
+```
+
+`xplus_backend_parsnip()` flips the spec's mode per fit — classification on
+binary iterative targets, regression on the fractional final ones — maps
+case weights to `hardhat` weight vectors, injects engine seeds so
+`xplus(seed = ...)` stays reproducible, and reuses out-of-bag scores when
+the engine stores them. Specs whose model lacks a regression mode fail with
+a clear message at the final stage.
 
 ```{r builtin}
 library(xplus)
@@ -145,8 +160,8 @@ calibration could not.
 
 The `parameters` field already declares tunable hyperparameters in caret
 `modelInfo` form (`trees`, `mtry`, `min_n` for ranger; `trees`, `learn_rate`,
-`tree_depth` for the boosting backends; `alpha` for glmnet; `k` for gam). It
-is informational today and is the seam for a parsnip-style tuning bridge —
-the contract only requires `fit`/`predict`, so kernel methods, neural
-learners or a `parsnip` model spec can be registered without touching
-`xplus()` internals.
+`tree_depth` for the boosting backends; `alpha` for glmnet; `k` for gam), and
+`xplus_backend_parsnip()` already bridges the tidymodels engine zoo. The
+remaining seam is learner selection: ranking backends and tuning their
+parameters needs evaluation metrics that stay honest without negative
+labels — the problem the `fit_predict` hook was built for.
