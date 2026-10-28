@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">xplus</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,6 +35,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/backends.html">Pluggable classification backends</a></li>
     <li><a class="dropdown-item" href="../articles/introduction.html">Introduction to xplus</a></li>
+    <li><a class="dropdown-item" href="../articles/pu-geometry.html">Seeing PU learning in two dimensions</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -147,7 +148,7 @@ reproducible, and reuses out-of-bag scores when the engine stores them.
 Specs whose model lacks a regression mode fail with a clear message at
 the final stage.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://alrobles.github.io/xplus/">xplus</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://alrobles.github.io/xplus/" class="external-link">xplus</a></span><span class="op">)</span></span>
 <span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_pu_data.html">simulate_pu_data</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">400</span>, p <span class="op">=</span> <span class="fl">8</span>, boundary <span class="op">=</span> <span class="st">"nonlinear"</span>,</span>
 <span>                        prevalence <span class="op">=</span> <span class="fl">0.4</span>, label_propensity <span class="op">=</span> <span class="fl">0.5</span>, seed <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span>
 <span><span class="va">unl</span> <span class="op">&lt;-</span> <span class="va">sim</span><span class="op">$</span><span class="va">y</span> <span class="op">==</span> <span class="fl">0</span></span>
@@ -438,17 +439,44 @@ exactly <code><a href="../reference/pu_score.html">pu_score()</a></code>:</p>
 <span><span class="va">wf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://workflows.tidymodels.org/reference/workflow.html" class="external-link">workflow</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">.</span>, spec <span class="op">=</span> <span class="fu"><a href="../reference/pu_xplus.html">pu_xplus</a></span><span class="op">(</span>backend <span class="op">=</span> <span class="st">"ranger"</span>, seed <span class="op">=</span> <span class="fl">42</span>,</span>
 <span>                                      trees <span class="op">=</span> <span class="fu"><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune</a></span><span class="op">(</span><span class="op">)</span>, mtry <span class="op">=</span> <span class="fu"><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://tune.tidymodels.org/reference/tune_grid.html" class="external-link">tune_grid</a></span><span class="op">(</span><span class="va">wf</span>, resamples <span class="op">=</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv</a></span><span class="op">(</span><span class="va">d</span>, v <span class="op">=</span> <span class="fl">5</span>, strata <span class="op">=</span> <span class="va">y</span><span class="op">)</span>,</span>
-<span>          grid <span class="op">=</span> <span class="fl">10</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">roc_auc</span><span class="op">)</span><span class="op">)</span></span>
+<span>          grid <span class="op">=</span> <span class="fl">10</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">pu_auc</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://finetune.tidymodels.org/reference/tune_sim_anneal.html" class="external-link">tune_sim_anneal</a></span><span class="op">(</span><span class="va">wf</span>, resamples <span class="op">=</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv</a></span><span class="op">(</span><span class="va">d</span>, v <span class="op">=</span> <span class="fl">5</span>, strata <span class="op">=</span> <span class="va">y</span><span class="op">)</span>,</span>
 <span>                param_info <span class="op">=</span> <span class="fu"><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">parameters</a></span><span class="op">(</span><span class="fu">trees</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50</span>, <span class="fl">500</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>                                        <span class="fu">finalize</span><span class="op">(</span><span class="fu">mtry</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span>, <span class="va">d</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>                iter <span class="op">=</span> <span class="fl">20</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">roc_auc</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                iter <span class="op">=</span> <span class="fl">20</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">pu_auc</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><code>pu_auc</code> is a proper yardstick probability metric shipping
+with xplus — identical to <code>roc_auc</code> computed on the observed
+labels, but named for what it actually measures (the labeled class is
+the <em>second</em> level under the parsnip convention, hence
+<code>event_level = "second"</code> by default).</p>
+<p>To compare <em>learners</em> rather than hyperparameters of a fixed
+learner, the canonical tidymodels idiom is <code>workflow_set</code>:
+one workflow per backend, ranked by the PU-valid metric — no need to
+tune over the categorical <code>backend</code> argument:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/workflowsets" class="external-link">workflowsets</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">wfs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://workflowsets.tidymodels.org/reference/workflow_set.html" class="external-link">workflow_set</a></span><span class="op">(</span></span>
+<span>  preproc <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>base <span class="op">=</span> <span class="va">y</span> <span class="op">~</span> <span class="va">.</span><span class="op">)</span>,</span>
+<span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    glmnet <span class="op">=</span> <span class="fu"><a href="../reference/pu_xplus.html">pu_xplus</a></span><span class="op">(</span>backend <span class="op">=</span> <span class="st">"glmnet"</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span>,</span>
+<span>    ranger <span class="op">=</span> <span class="fu"><a href="../reference/pu_xplus.html">pu_xplus</a></span><span class="op">(</span>backend <span class="op">=</span> <span class="st">"ranger"</span>, seed <span class="op">=</span> <span class="fl">42</span>, trees <span class="op">=</span> <span class="fu"><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    xgboost <span class="op">=</span> <span class="fu"><a href="../reference/pu_xplus.html">pu_xplus</a></span><span class="op">(</span>backend <span class="op">=</span> <span class="st">"xgboost"</span>, seed <span class="op">=</span> <span class="fl">42</span>, trees <span class="op">=</span> <span class="fu"><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://workflowsets.tidymodels.org/reference/workflow_map.html" class="external-link">workflow_map</a></span><span class="op">(</span><span class="va">wfs</span>, <span class="st">"tune_grid"</span>,</span>
+<span>             resamples <span class="op">=</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv</a></span><span class="op">(</span><span class="va">d</span>, v <span class="op">=</span> <span class="fl">5</span>, strata <span class="op">=</span> <span class="va">y</span><span class="op">)</span>,</span>
+<span>             grid <span class="op">=</span> <span class="fl">10</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">pu_auc</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://workflowsets.tidymodels.org/reference/rank_results.html" class="external-link">rank_results</a></span><span class="op">(</span>rank_metric <span class="op">=</span> <span class="st">"pu_auc"</span><span class="op">)</span></span></code></pre></div>
 <p>Registration is automatic when parsnip is installed; the wrapper
-enforces the PU label contract (factor <code>0/1</code>, data-frame or
-matrix predictors), keeps <code><a href="../reference/xplus.html">xplus()</a></code> seeds explicit, and
-filters backend-foreign arguments with a warning so mixed-backend grids
-remain usable.</p>
+enforces the PU label contract (the second outcome level is the positive
+class, non-numeric predictors are expanded via
+<code><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix()</a></code>), keeps <code><a href="../reference/xplus.html">xplus()</a></code> seeds explicit,
+and filters backend-foreign arguments with a warning — so tuning
+<code>trees</code> against <code>backend = "glmnet"</code> warns and
+continues rather than failing, but conditional grids should still pair
+each backend with only the parameters it accepts.</p>
 </div>
 <div class="section level2">
 <h2 id="head-to-head-against-published-pu-methods">Head-to-head against published PU methods<a class="anchor" aria-label="anchor" href="#head-to-head-against-published-pu-methods"></a>
