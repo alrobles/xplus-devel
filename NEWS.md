@@ -1,5 +1,16 @@
 # xplus (development version)
 
+* `pu_xplus()` registers xplus as a parsnip model (engine `"xplus"`,
+  classification mode) so `fit_xy()`/`fit()`, `predict(type = "prob")`,
+  `update()`, and `tune::tune_grid()`/`finetune::tune_sim_anneal()` all work
+  against the backend contract. Registration is automatic on load when
+  parsnip is installed and is idempotent. The `backend` argument selects
+  the learner; backend-constructor arguments (`trees`, `learn_rate`,
+  `mtry`, `min_n`, `tree_depth`, `sample_size`, `loss_reduction`) accept
+  `tune()` placeholders with `dials` parameter mappings and are ignored
+  with a warning when the selected backend does not accept them. Standard
+  `yardstick` metrics over observed labels give the PU-valid
+  positive-vs-unlabeled score for free.
 * Pluggable fitting backends: `xplus()` gains a `backend` argument accepting
   `"glmnet"` (default, historical behavior), `"ranger"`, `"gam"`, or a custom
   `xplus_backend()` spec with `fit`/`predict` functions. `alpha` and

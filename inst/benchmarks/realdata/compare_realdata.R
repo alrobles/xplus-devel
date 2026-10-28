@@ -36,9 +36,19 @@ load_mushroom <- function() {
   list(name = "mushroom", x = as.matrix(x), z = z)
 }
 
+load_covtype <- function(n_sub = 40000) {
+  f <- fetch("https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz",
+             file.path(data_dir, "covtype.data.gz"))
+  d <- utils::read.csv(gzfile(f), header = FALSE)
+  z <- as.integer(d[[ncol(d)]] == 2)          # lodgepole pine vs rest
+  keep <- sample.int(nrow(d), n_sub)
+  list(name = "covtype", x = as.matrix(d[keep, -ncol(d)]), z = z[keep])
+}
+
 backends <- c("glmnet", "ranger", "lightgbm", "xgboost")
 rows <- list()
-for (ds in list(load_spambase(), load_mushroom())) {
+set.seed(1)
+for (ds in list(load_spambase(), load_mushroom(), load_covtype())) {
   for (rep in seq_len(reps)) {
     y <- pu_mask(ds$z, label_propensity = 0.4, seed = 100 + rep)
     lb <- xplus_grid(ds$x, y, backends, max_iter = 15, seed = 200 + rep,

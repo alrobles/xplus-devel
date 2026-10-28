@@ -26,6 +26,8 @@ Imports:
     utils
 Suggests:
     covr,
+    dials,
+    finetune,
     hardhat,
     knitr,
     lightgbm,
@@ -34,9 +36,13 @@ Suggests:
     ranger (>= 0.14),
     rlang,
     rmarkdown,
+    rsample,
     survival,
     testthat (>= 3.0.0),
-    xgboost
+    tune,
+    workflows,
+    xgboost,
+    yardstick
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://alrobles.github.io/xplus/, https://github.com/alrobles/xplus-devel

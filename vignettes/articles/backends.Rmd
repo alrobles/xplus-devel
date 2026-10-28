@@ -180,14 +180,43 @@ The same pattern holds on open binary datasets PU-ified with `pu_mask()` —
 on UCI spambase (ranger 0.852 ≈ glmnet 0.845 > xgboost 0.807) and mushroom
 (xgboost 0.843 > lightgbm 0.836 > glmnet 0.818), the winner changes with
 the feature geometry, and every ranking was produced without ever reading
-the hidden negatives.
+the hidden negatives. Covertype (40k-row subsample of the UCI forest-cover
+data, lodgepole pine vs rest) confirms it again — xgboost 0.756 > ranger
+0.744 > lightgbm 0.740 > glmnet 0.698 — three datasets, three different
+leaderboards.
+
+## Tuning with tidymodels
+
+`pu_xplus()` registers xplus as a first-class parsnip model, so the whole
+tidymodels tuning stack drives the backend contract directly. Engine
+parameters become `tune()` placeholders, and any `yardstick` metric computed
+on the observed labels is PU-valid — the labeled positives vs the
+unlabeled-as-negative AUC is exactly `pu_score()`:
+
+```r
+library(parsnip); library(tune); library(finetune)
+library(workflows); library(rsample); library(yardstick)
+
+wf <- workflow(y ~ ., spec = pu_xplus(backend = "ranger", seed = 42,
+                                      trees = tune(), mtry = tune()))
+tune_grid(wf, resamples = vfold_cv(d, v = 5, strata = y),
+          grid = 10, metrics = metric_set(roc_auc))
+
+tune_sim_anneal(wf, resamples = vfold_cv(d, v = 5, strata = y),
+                param_info = parameters(trees(c(50, 500)),
+                                        finalize(mtry(c(1, 10)), d)),
+                iter = 20, metrics = metric_set(roc_auc))
+```
+
+Registration is automatic when parsnip is installed; the wrapper enforces
+the PU label contract (factor `0/1`, data-frame or matrix predictors), keeps
+`xplus()` seeds explicit, and filters backend-foreign arguments with a
+warning so mixed-backend grids remain usable.
 
 ## What is next
 
-The `parameters` field already declares tunable hyperparameters in caret
-`modelInfo` form (`trees`, `mtry`, `min_n` for ranger; `trees`, `learn_rate`,
-`tree_depth` for the boosting backends; `alpha` for glmnet; `k` for gam), and
-`xplus_backend_parsnip()` already bridges the tidymodels engine zoo. The
-remaining seam is learner selection: ranking backends and tuning their
-parameters needs evaluation metrics that stay honest without negative
-labels — the problem the `fit_predict` hook was built for.
+With `tune`/`finetune` integrated, the open direction is benchmark depth:
+held-out evaluation across more PU-ified datasets, convergence-aware
+stopping for boosting backends, and comparison against PU baselines such as
+Elkan–Noto rescaling — all on top of the honest-prediction infrastructure
+the backend contract already provides.
