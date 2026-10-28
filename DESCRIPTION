@@ -28,6 +28,7 @@ Suggests:
     covr,
     dials,
     finetune,
+    ggplot2,
     hardhat,
     knitr,
     lightgbm,
