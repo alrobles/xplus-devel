@@ -25,7 +25,9 @@ pu_mask(z, label_propensity = 0.5, seed = NULL)
 
 - seed:
 
-  Optional nonnegative integer seed.
+  Optional nonnegative integer seed. Use a different seed than the one
+  that generated `z` — reusing the same stream can correlate the mask
+  with the simulated labels.
 
 ## Value
 
@@ -40,7 +42,7 @@ same length as `z`.
 ## Examples
 
 ``` r
-z <- rbinom(200, 1, 0.4)
+z <- c(rep(1, 80), rep(0, 120))
 y <- pu_mask(z, label_propensity = 0.5, seed = 1)
 fit <- xplus(matrix(rnorm(200 * 4), ncol = 4), y, max_iter = 3)
 ```

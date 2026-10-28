@@ -28,6 +28,8 @@
   : LACS sample dataset
 - [`predict(`*`<xplus>`*`)`](https://alrobles.github.io/xplus/reference/predict.xplus.md)
   : Predict from an xplus model
+- [`predict(`*`<xplus_baseline>`*`)`](https://alrobles.github.io/xplus/reference/predict.xplus_baseline.md)
+  : Predict from a PU baseline model
 - [`predicted_coefficients_example`](https://alrobles.github.io/xplus/reference/predicted_coefficients_example.md)
   : Example predicted coefficients
 - [`predicted_y_example`](https://alrobles.github.io/xplus/reference/predicted_y_example.md)
@@ -44,6 +46,8 @@
   Convert true binary labels into PU labels
 - [`pu_score()`](https://alrobles.github.io/xplus/reference/pu_score.md)
   : PU-valid score for a fitted xplus object
+- [`pu_xplus()`](https://alrobles.github.io/xplus/reference/pu_xplus.md)
+  : parsnip model spec for PU learning with xplus
 - [`simulate_pu_data()`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)
   : Simulate a positive-unlabeled dataset
 - [`summary(`*`<xplus>`*`)`](https://alrobles.github.io/xplus/reference/summary.xplus.md)
@@ -64,7 +68,12 @@
   : Ranger random-forest backend for xplus
 - [`xplus_backend_xgboost()`](https://alrobles.github.io/xplus/reference/xplus_backend_xgboost.md)
   : XGBoost gradient-boosting backend for xplus
+- [`xplus_elkan_noto()`](https://alrobles.github.io/xplus/reference/xplus_elkan_noto.md)
+  [`xplus_naive()`](https://alrobles.github.io/xplus/reference/xplus_elkan_noto.md)
+  : PU learning baselines on the xplus backend contract
 - [`xplus_grid()`](https://alrobles.github.io/xplus/reference/xplus_grid.md)
   : Compare learners or hyperparameter grids on PU data
 - [`xplus_object_example`](https://alrobles.github.io/xplus/reference/xplus_object_example.md)
   : Example xplus object
+- [`xplus_parsnip_register()`](https://alrobles.github.io/xplus/reference/xplus_parsnip_register.md)
+  : xplus as a parsnip model

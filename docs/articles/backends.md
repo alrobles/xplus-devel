@@ -41,7 +41,7 @@ stays reproducible, and reuses out-of-bag scores when the engine stores
 them. Specs whose model lacks a regression mode fail with a clear
 message at the final stage.
 
-[`library`](https://rdrr.io/r/base/library.html)`(`[`xplus`](https://alrobles.github.io/xplus/)`)`` ``#> Package 'xplus' version 1.0.2.9000`` ``#> Type 'citation("xplus")' for citing this R package in publications.`` ``sim`` ``<-`` `[`simulate_pu_data`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)`(``n ``=`` ``400``, p ``=`` ``8``, boundary ``=`` ``"nonlinear"``,`` `` prevalence ``=`` ``0.4``, label_propensity ``=`` ``0.5``, seed ``=`` ``11``)`` ``unl`` ``<-`` ``sim``$``y`` ``==`` ``0`` `` ``fit_glmnet`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` ``"glmnet"``, max_iter ``=`` ``30``, seed ``=`` ``3``)`` ``fit_ranger`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` `[`xplus_backend_ranger`](https://alrobles.github.io/xplus/reference/xplus_backend_ranger.md)`(``trees ``=`` ``300``)``,`` `` max_iter ``=`` ``30``, seed ``=`` ``3``)`` `` `[`data.frame`](https://rdrr.io/r/base/data.frame.html)`(`` `` backend ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``"glmnet"``, ``"ranger"``)``,`` `` auc_unlabeled ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(`[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_glmnet``)``)``[``unl``]``)``,`` `` `[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_ranger``)``)``[``unl``]``)``)``,`` `` cutoff ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``cutoff``, ``fit_ranger``$``cutoff``)``,`` `` n_iter ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``n_iter``, ``fit_ranger``$``n_iter``)`` ``)`` ``#> backend auc_unlabeled cutoff n_iter`` ``#> 1 glmnet 0.5000000 0.581250 12`` ``#> 2 ranger 0.8932671 0.140136 9`
+[`library`](https://rdrr.io/r/base/library.html)`(`[`xplus`](https://alrobles.github.io/xplus/)`)`` ``sim`` ``<-`` `[`simulate_pu_data`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)`(``n ``=`` ``400``, p ``=`` ``8``, boundary ``=`` ``"nonlinear"``,`` `` prevalence ``=`` ``0.4``, label_propensity ``=`` ``0.5``, seed ``=`` ``11``)`` ``unl`` ``<-`` ``sim``$``y`` ``==`` ``0`` `` ``fit_glmnet`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` ``"glmnet"``, max_iter ``=`` ``30``, seed ``=`` ``3``)`` ``fit_ranger`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` `[`xplus_backend_ranger`](https://alrobles.github.io/xplus/reference/xplus_backend_ranger.md)`(``trees ``=`` ``300``)``,`` `` max_iter ``=`` ``30``, seed ``=`` ``3``)`` `` `[`data.frame`](https://rdrr.io/r/base/data.frame.html)`(`` `` backend ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``"glmnet"``, ``"ranger"``)``,`` `` auc_unlabeled ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(`[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_glmnet``)``)``[``unl``]``)``,`` `` `[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_ranger``)``)``[``unl``]``)``)``,`` `` cutoff ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``cutoff``, ``fit_ranger``$``cutoff``)``,`` `` n_iter ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``n_iter``, ``fit_ranger``$``n_iter``)`` ``)`` ``#> backend auc_unlabeled cutoff n_iter`` ``#> 1 glmnet 0.5000000 0.581250 12`` ``#> 2 ranger 0.8932671 0.140136 9`
 
 On a nonlinear boundary the elastic-net logistic fit collapses toward
 chance while the forest tracks the radial structure; on linear
@@ -151,16 +151,63 @@ The same pattern holds on open binary datasets PU-ified with
 on UCI spambase (ranger 0.852 ≈ glmnet 0.845 \> xgboost 0.807) and
 mushroom (xgboost 0.843 \> lightgbm 0.836 \> glmnet 0.818), the winner
 changes with the feature geometry, and every ranking was produced
-without ever reading the hidden negatives.
+without ever reading the hidden negatives. Covertype (40k-row subsample
+of the UCI forest-cover data, lodgepole pine vs rest) confirms it again
+— xgboost 0.756 \> ranger 0.744 \> lightgbm 0.740 \> glmnet 0.698 —
+three datasets, three different leaderboards.
+
+## Tuning with tidymodels
+
+[`pu_xplus()`](https://alrobles.github.io/xplus/reference/pu_xplus.md)
+registers xplus as a first-class parsnip model, so the whole tidymodels
+tuning stack drives the backend contract directly. Engine parameters
+become [`tune()`](https://hardhat.tidymodels.org/reference/tune.html)
+placeholders, and any `yardstick` metric computed on the observed labels
+is PU-valid — the labeled positives vs the unlabeled-as-negative AUC is
+exactly
+[`pu_score()`](https://alrobles.github.io/xplus/reference/pu_score.md):
+
+[`library`](https://rdrr.io/r/base/library.html)`(`[`parsnip`](https://github.com/tidymodels/parsnip)`)``; `[`library`](https://rdrr.io/r/base/library.html)`(`[`tune`](https://tune.tidymodels.org/)`)``; `[`library`](https://rdrr.io/r/base/library.html)`(`[`finetune`](https://github.com/tidymodels/finetune)`)`` `[`library`](https://rdrr.io/r/base/library.html)`(`[`workflows`](https://github.com/tidymodels/workflows)`)``; `[`library`](https://rdrr.io/r/base/library.html)`(`[`rsample`](https://rsample.tidymodels.org)`)``; `[`library`](https://rdrr.io/r/base/library.html)`(`[`yardstick`](https://github.com/tidymodels/yardstick)`)`` `` ``wf`` ``<-`` `[`workflow`](https://workflows.tidymodels.org/reference/workflow.html)`(``y`` ``~`` ``.``, spec ``=`` `[`pu_xplus`](https://alrobles.github.io/xplus/reference/pu_xplus.md)`(``backend ``=`` ``"ranger"``, seed ``=`` ``42``,`` `` trees ``=`` `[`tune`](https://hardhat.tidymodels.org/reference/tune.html)`(``)``, mtry ``=`` `[`tune`](https://hardhat.tidymodels.org/reference/tune.html)`(``)``)``)`` `[`tune_grid`](https://tune.tidymodels.org/reference/tune_grid.html)`(``wf``, resamples ``=`` `[`vfold_cv`](https://rsample.tidymodels.org/reference/vfold_cv.html)`(``d``, v ``=`` ``5``, strata ``=`` ``y``)``,`` `` grid ``=`` ``10``, metrics ``=`` `[`metric_set`](https://yardstick.tidymodels.org/reference/metric_set.html)`(``roc_auc``)``)`` `` `[`tune_sim_anneal`](https://finetune.tidymodels.org/reference/tune_sim_anneal.html)`(``wf``, resamples ``=`` `[`vfold_cv`](https://rsample.tidymodels.org/reference/vfold_cv.html)`(``d``, v ``=`` ``5``, strata ``=`` ``y``)``,`` `` param_info ``=`` `[`parameters`](https://dials.tidymodels.org/reference/parameters.html)`(``trees``(`[`c`](https://rdrr.io/r/base/c.html)`(``50``, ``500``)``)``,`` `` ``finalize``(``mtry``(`[`c`](https://rdrr.io/r/base/c.html)`(``1``, ``10``)``)``, ``d``)``)``,`` `` iter ``=`` ``20``, metrics ``=`` `[`metric_set`](https://yardstick.tidymodels.org/reference/metric_set.html)`(``roc_auc``)``)`
+
+Registration is automatic when parsnip is installed; the wrapper
+enforces the PU label contract (factor `0/1`, data-frame or matrix
+predictors), keeps
+[`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md) seeds
+explicit, and filters backend-foreign arguments with a warning so
+mixed-backend grids remain usable.
+
+## Head-to-head against published PU methods
+
+[`xplus_elkan_noto()`](https://alrobles.github.io/xplus/reference/xplus_elkan_noto.md)
+and
+[`xplus_naive()`](https://alrobles.github.io/xplus/reference/xplus_elkan_noto.md)
+express classical PU baselines on the same backend contract — Elkan-Noto
+(2008) rescaled P-vs-U classification and the naive U-as-negative
+classifier — so every method shares the honest prediction machinery. On
+held-out test labels (SCAR masking, `label_propensity = 0.5`, 70/30
+stratified split, mean of 3 reps):
+
+| dataset | published SOTA | best ours | margin |
+|----|----|----|----|
+| mushroom | PU ET 99.70% | **elkan_noto–ranger 99.99%** | +0.29 |
+| covtype | PU ET 76.51% | **elkan_noto–ranger 81.10%**, xplus–xgboost 80.86% | +4.59 |
+| spambase | (TED)ⁿ 89.40% | **xplus–glmnet 91.24%**, elkan_noto–glmnet 90.97% | +1.84 |
+
+The naive baseline collapses everywhere (≤77%), confirming that PU
+methods recover most of what supervised discrimination offers. Two
+findings matter beyond the leaderboard: on near-separable data
+(mushroom) the PLUS quantile cutoff leaves accuracy on the table — its
+oracle threshold reaches 100% where the SCAR cutoff yields 94% — while
+Elkan-Noto’s propensity rescaling closes that gap; and xplus edges
+Elkan-Noto where pseudo-label iteration pays (spambase), so the two are
+complementary rather than competing. Published numbers come from
+slightly different protocols, so treat exact deltas as indicative rather
+than definitive.
 
 ## What is next
 
-The `parameters` field already declares tunable hyperparameters in caret
-`modelInfo` form (`trees`, `mtry`, `min_n` for ranger; `trees`,
-`learn_rate`, `tree_depth` for the boosting backends; `alpha` for
-glmnet; `k` for gam), and
-[`xplus_backend_parsnip()`](https://alrobles.github.io/xplus/reference/xplus_backend_parsnip.md)
-already bridges the tidymodels engine zoo. The remaining seam is learner
-selection: ranking backends and tuning their parameters needs evaluation
-metrics that stay honest without negative labels — the problem the
-`fit_predict` hook was built for.
+With `tune`/`finetune` integrated, the open direction is benchmark
+depth: held-out evaluation across more PU-ified datasets,
+convergence-aware stopping for boosting backends, and comparison against
+PU baselines such as Elkan–Noto rescaling — all on top of the
+honest-prediction infrastructure the backend contract already provides.

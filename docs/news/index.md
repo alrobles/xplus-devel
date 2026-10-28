@@ -2,6 +2,34 @@
 
 ## xplus (development version)
 
+- New PU baselines
+  [`xplus_elkan_noto()`](https://alrobles.github.io/xplus/reference/xplus_elkan_noto.md)
+  and
+  [`xplus_naive()`](https://alrobles.github.io/xplus/reference/xplus_elkan_noto.md)
+  expressed on the same backend contract as
+  [`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md),
+  enabling honest head-to-head comparisons: Elkan-Noto rescales P-vs-U
+  probabilities by the estimated labeling propensity (mean or median
+  over labeled positives), and the naive baseline treats all unlabeled
+  instances as negatives. Both return `xplus_baseline` objects with
+  `predict` support and a `$cutoff`.
+- [`pu_xplus()`](https://alrobles.github.io/xplus/reference/pu_xplus.md)
+  registers xplus as a parsnip model (engine `"xplus"`, classification
+  mode) so
+  [`fit_xy()`](https://generics.r-lib.org/reference/fit_xy.html)/[`fit()`](https://generics.r-lib.org/reference/fit.html),
+  `predict(type = "prob")`,
+  [`update()`](https://rdrr.io/r/stats/update.html), and
+  [`tune::tune_grid()`](https://tune.tidymodels.org/reference/tune_grid.html)/[`finetune::tune_sim_anneal()`](https://finetune.tidymodels.org/reference/tune_sim_anneal.html)
+  all work against the backend contract. Registration is automatic on
+  load when parsnip is installed and is idempotent. The `backend`
+  argument selects the learner; backend-constructor arguments (`trees`,
+  `learn_rate`, `mtry`, `min_n`, `tree_depth`, `sample_size`,
+  `loss_reduction`) accept
+  [`tune()`](https://hardhat.tidymodels.org/reference/tune.html)
+  placeholders with `dials` parameter mappings and are ignored with a
+  warning when the selected backend does not accept them. Standard
+  `yardstick` metrics over observed labels give the PU-valid
+  positive-vs-unlabeled score for free.
 - Pluggable fitting backends:
   [`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md) gains
   a `backend` argument accepting `"glmnet"` (default, historical

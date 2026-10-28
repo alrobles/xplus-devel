@@ -22,6 +22,7 @@
 <url><loc>https://alrobles.github.io/xplus/reference/lacsSample.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/new_xplus.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/predict.xplus.html</loc></url>
+<url><loc>https://alrobles.github.io/xplus/reference/predict.xplus_baseline.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/predicted_coefficients_example.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/predicted_y_example.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/print.summary.xplus.html</loc></url>
@@ -30,6 +31,7 @@
 <url><loc>https://alrobles.github.io/xplus/reference/print.xplus_pu_data.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/pu_mask.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/pu_score.html</loc></url>
+<url><loc>https://alrobles.github.io/xplus/reference/pu_xplus.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/simulate_pu_data.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/stratified_foldid.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/summary.xplus.html</loc></url>
@@ -42,7 +44,10 @@
 <url><loc>https://alrobles.github.io/xplus/reference/xplus_backend_parsnip.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/xplus_backend_ranger.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/xplus_backend_xgboost.html</loc></url>
+<url><loc>https://alrobles.github.io/xplus/reference/xplus_elkan_noto.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/xplus_grid.html</loc></url>
 <url><loc>https://alrobles.github.io/xplus/reference/xplus_object_example.html</loc></url>
+<url><loc>https://alrobles.github.io/xplus/reference/xplus_parsnip_fit.html</loc></url>
+<url><loc>https://alrobles.github.io/xplus/reference/xplus_parsnip_register.html</loc></url>
 </urlset>
 

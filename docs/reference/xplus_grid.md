@@ -75,6 +75,6 @@ sim <- simulate_pu_data(n = 300, p = 6, boundary = "nonlinear", seed = 1,
                         prevalence = 0.4, label_propensity = 0.5)
 xplus_grid(sim$x, sim$y, c("glmnet", "ranger"), max_iter = 5, seed = 1)
 #>   learner     score n_iter stop_reason seconds error
-#> 2  ranger 0.7580417      5    max_iter   0.571  <NA>
-#> 1  glmnet 0.5981303      5    max_iter   0.157  <NA>
+#> 2  ranger 0.7580417      5    max_iter   0.305  <NA>
+#> 1  glmnet 0.5981303      5    max_iter   0.081  <NA>
 ```

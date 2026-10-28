@@ -148,8 +148,6 @@ Specs whose model lacks a regression mode fail with a clear message at
 the final stage.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://alrobles.github.io/xplus/">xplus</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Package 'xplus' version 1.0.2.9000</span></span>
-<span><span class="co">#&gt; Type 'citation("xplus")' for citing this R package in publications.</span></span>
 <span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simulate_pu_data.html">simulate_pu_data</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">400</span>, p <span class="op">=</span> <span class="fl">8</span>, boundary <span class="op">=</span> <span class="st">"nonlinear"</span>,</span>
 <span>                        prevalence <span class="op">=</span> <span class="fl">0.4</span>, label_propensity <span class="op">=</span> <span class="fl">0.5</span>, seed <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span>
 <span><span class="va">unl</span> <span class="op">&lt;-</span> <span class="va">sim</span><span class="op">$</span><span class="va">y</span> <span class="op">==</span> <span class="fl">0</span></span>
@@ -418,21 +416,105 @@ choice an empirical one.</p>
 <code><a href="../reference/pu_mask.html">pu_mask()</a></code> — on UCI spambase (ranger 0.852 ≈ glmnet 0.845
 &gt; xgboost 0.807) and mushroom (xgboost 0.843 &gt; lightgbm 0.836 &gt;
 glmnet 0.818), the winner changes with the feature geometry, and every
-ranking was produced without ever reading the hidden negatives.</p>
+ranking was produced without ever reading the hidden negatives.
+Covertype (40k-row subsample of the UCI forest-cover data, lodgepole
+pine vs rest) confirms it again — xgboost 0.756 &gt; ranger 0.744 &gt;
+lightgbm 0.740 &gt; glmnet 0.698 — three datasets, three different
+leaderboards.</p>
+</div>
+<div class="section level2">
+<h2 id="tuning-with-tidymodels">Tuning with tidymodels<a class="anchor" aria-label="anchor" href="#tuning-with-tidymodels"></a>
+</h2>
+<p><code><a href="../reference/pu_xplus.html">pu_xplus()</a></code> registers xplus as a first-class parsnip
+model, so the whole tidymodels tuning stack drives the backend contract
+directly. Engine parameters become <code><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune()</a></code> placeholders, and
+any <code>yardstick</code> metric computed on the observed labels is
+PU-valid — the labeled positives vs the unlabeled-as-negative AUC is
+exactly <code><a href="../reference/pu_score.html">pu_score()</a></code>:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/parsnip" class="external-link">parsnip</a></span><span class="op">)</span>; <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tune.tidymodels.org/" class="external-link">tune</a></span><span class="op">)</span>; <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/finetune" class="external-link">finetune</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/workflows" class="external-link">workflows</a></span><span class="op">)</span>; <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rsample.tidymodels.org" class="external-link">rsample</a></span><span class="op">)</span>; <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidymodels/yardstick" class="external-link">yardstick</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">wf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://workflows.tidymodels.org/reference/workflow.html" class="external-link">workflow</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">.</span>, spec <span class="op">=</span> <span class="fu"><a href="../reference/pu_xplus.html">pu_xplus</a></span><span class="op">(</span>backend <span class="op">=</span> <span class="st">"ranger"</span>, seed <span class="op">=</span> <span class="fl">42</span>,</span>
+<span>                                      trees <span class="op">=</span> <span class="fu"><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune</a></span><span class="op">(</span><span class="op">)</span>, mtry <span class="op">=</span> <span class="fu"><a href="https://hardhat.tidymodels.org/reference/tune.html" class="external-link">tune</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://tune.tidymodels.org/reference/tune_grid.html" class="external-link">tune_grid</a></span><span class="op">(</span><span class="va">wf</span>, resamples <span class="op">=</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv</a></span><span class="op">(</span><span class="va">d</span>, v <span class="op">=</span> <span class="fl">5</span>, strata <span class="op">=</span> <span class="va">y</span><span class="op">)</span>,</span>
+<span>          grid <span class="op">=</span> <span class="fl">10</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">roc_auc</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://finetune.tidymodels.org/reference/tune_sim_anneal.html" class="external-link">tune_sim_anneal</a></span><span class="op">(</span><span class="va">wf</span>, resamples <span class="op">=</span> <span class="fu"><a href="https://rsample.tidymodels.org/reference/vfold_cv.html" class="external-link">vfold_cv</a></span><span class="op">(</span><span class="va">d</span>, v <span class="op">=</span> <span class="fl">5</span>, strata <span class="op">=</span> <span class="va">y</span><span class="op">)</span>,</span>
+<span>                param_info <span class="op">=</span> <span class="fu"><a href="https://dials.tidymodels.org/reference/parameters.html" class="external-link">parameters</a></span><span class="op">(</span><span class="fu">trees</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50</span>, <span class="fl">500</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>                                        <span class="fu">finalize</span><span class="op">(</span><span class="fu">mtry</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span>, <span class="va">d</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>                iter <span class="op">=</span> <span class="fl">20</span>, metrics <span class="op">=</span> <span class="fu"><a href="https://yardstick.tidymodels.org/reference/metric_set.html" class="external-link">metric_set</a></span><span class="op">(</span><span class="va">roc_auc</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Registration is automatic when parsnip is installed; the wrapper
+enforces the PU label contract (factor <code>0/1</code>, data-frame or
+matrix predictors), keeps <code><a href="../reference/xplus.html">xplus()</a></code> seeds explicit, and
+filters backend-foreign arguments with a warning so mixed-backend grids
+remain usable.</p>
+</div>
+<div class="section level2">
+<h2 id="head-to-head-against-published-pu-methods">Head-to-head against published PU methods<a class="anchor" aria-label="anchor" href="#head-to-head-against-published-pu-methods"></a>
+</h2>
+<p><code><a href="../reference/xplus_elkan_noto.html">xplus_elkan_noto()</a></code> and <code><a href="../reference/xplus_elkan_noto.html">xplus_naive()</a></code>
+express classical PU baselines on the same backend contract — Elkan-Noto
+(2008) rescaled P-vs-U classification and the naive U-as-negative
+classifier — so every method shares the honest prediction machinery. On
+held-out test labels (SCAR masking, <code>label_propensity = 0.5</code>,
+70/30 stratified split, mean of 3 reps):</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th>dataset</th>
+<th>published SOTA</th>
+<th>best ours</th>
+<th>margin</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>mushroom</td>
+<td>PU ET 99.70%</td>
+<td><strong>elkan_noto–ranger 99.99%</strong></td>
+<td>+0.29</td>
+</tr>
+<tr class="even">
+<td>covtype</td>
+<td>PU ET 76.51%</td>
+<td>
+<strong>elkan_noto–ranger 81.10%</strong>, xplus–xgboost 80.86%</td>
+<td>+4.59</td>
+</tr>
+<tr class="odd">
+<td>spambase</td>
+<td>(TED)ⁿ 89.40%</td>
+<td>
+<strong>xplus–glmnet 91.24%</strong>, elkan_noto–glmnet 90.97%</td>
+<td>+1.84</td>
+</tr>
+</tbody>
+</table>
+<p>The naive baseline collapses everywhere (≤77%), confirming that PU
+methods recover most of what supervised discrimination offers. Two
+findings matter beyond the leaderboard: on near-separable data
+(mushroom) the PLUS quantile cutoff leaves accuracy on the table — its
+oracle threshold reaches 100% where the SCAR cutoff yields 94% — while
+Elkan-Noto’s propensity rescaling closes that gap; and xplus edges
+Elkan-Noto where pseudo-label iteration pays (spambase), so the two are
+complementary rather than competing. Published numbers come from
+slightly different protocols, so treat exact deltas as indicative rather
+than definitive.</p>
 </div>
 <div class="section level2">
 <h2 id="what-is-next">What is next<a class="anchor" aria-label="anchor" href="#what-is-next"></a>
 </h2>
-<p>The <code>parameters</code> field already declares tunable
-hyperparameters in caret <code>modelInfo</code> form
-(<code>trees</code>, <code>mtry</code>, <code>min_n</code> for ranger;
-<code>trees</code>, <code>learn_rate</code>, <code>tree_depth</code> for
-the boosting backends; <code>alpha</code> for glmnet; <code>k</code> for
-gam), and <code><a href="../reference/xplus_backend_parsnip.html">xplus_backend_parsnip()</a></code> already bridges the
-tidymodels engine zoo. The remaining seam is learner selection: ranking
-backends and tuning their parameters needs evaluation metrics that stay
-honest without negative labels — the problem the
-<code>fit_predict</code> hook was built for.</p>
+<p>With <code>tune</code>/<code>finetune</code> integrated, the open
+direction is benchmark depth: held-out evaluation across more PU-ified
+datasets, convergence-aware stopping for boosting backends, and
+comparison against PU baselines such as Elkan–Noto rescaling — all on
+top of the honest-prediction infrastructure the backend contract already
+provides.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

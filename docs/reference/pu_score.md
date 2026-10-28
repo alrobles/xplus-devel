@@ -40,5 +40,5 @@ A numeric scalar; higher is better.
 fit <- xplus(matrix(rnorm(100 * 4), ncol = 4),
              c(rep(1, 20), rep(0, 80)), max_iter = 3)
 pu_score(fit)
-#> [1] 0.5
+#> [1] 0.586875
 ```
