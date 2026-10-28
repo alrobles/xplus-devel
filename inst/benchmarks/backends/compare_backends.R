@@ -36,7 +36,7 @@ n_obs <- if (quick) 400 else 1000
 n_feat <- if (quick) 8 else 12
 max_iter <- if (quick) 30 else 100
 
-backends <- c("glmnet", "ranger", "gam")
+backends <- c("glmnet", "ranger", "gam", "xgboost", "lightgbm")
 boundaries <- c("linear", "interaction", "nonlinear")
 
 f1_at_cutoff <- function(z, prob, cutoff) {

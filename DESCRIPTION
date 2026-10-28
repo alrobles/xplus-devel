@@ -27,13 +27,15 @@ Imports:
 Suggests:
     covr,
     knitr,
+    lightgbm,
     mgcv,
     ranger (>= 0.14),
     rmarkdown,
     survival,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    xgboost
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-URL: https://github.com/alrobles/xplus-devel
+URL: https://alrobles.github.io/xplus/, https://github.com/alrobles/xplus-devel
 BugReports: https://github.com/alrobles/xplus-devel/issues
 Config/roxygen2/version: 8.1.0

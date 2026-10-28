@@ -55,20 +55,28 @@ predict.xplus <- function(object, newx = NULL, s = "lambda.min", type = "respons
     if (type == "link") return(stats::qlogis(prob))
   } else {
     training <- .xplus_matrix(object$x)
-    if (is.null(newx)) newx <- training
-    newx <- .xplus_matrix(newx, reference = training, name = "newx")
-    if (backend_name == "glmnet") {
-      lambda <- if (named_lambda) .xplus_scalar(object$xplus[[s]], s, lower = 0) else s
-      if (type == "link") {
-        return(stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "link"))
-      }
-      prob <- .xplus_probabilities(
-        stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "response"),
-        n = nrow(newx)
-      )
-    } else {
-      prob <- .xplus_backend_predict(object$backend, object$xplus, newx, nrow(newx))
+    if (is.null(newx) && backend_name != "glmnet") {
+      # Stored pred_y holds the backend's honest training predictions (e.g.
+      # ranger out-of-bag); re-predicting training rows in-sample would leak
+      # memorized targets for high-capacity learners.
+      prob <- .xplus_probabilities(object$pred_y, nrow(training))
       if (type == "link") return(stats::qlogis(prob))
+    } else {
+      if (is.null(newx)) newx <- training
+      newx <- .xplus_matrix(newx, reference = training, name = "newx")
+      if (backend_name == "glmnet") {
+        lambda <- if (named_lambda) .xplus_scalar(object$xplus[[s]], s, lower = 0) else s
+        if (type == "link") {
+          return(stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "link"))
+        }
+        prob <- .xplus_probabilities(
+          stats::predict(object$xplus$glmnet.fit, newx = newx, s = lambda, type = "response"),
+          n = nrow(newx)
+        )
+      } else {
+        prob <- .xplus_backend_predict(object$backend, object$xplus, newx, nrow(newx))
+        if (type == "link") return(stats::qlogis(prob))
+      }
     }
   }
 

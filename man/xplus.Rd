@@ -71,7 +71,8 @@ and is recorded with the actual fitting targets and the iteration history.}
 \item{sampling, cv_measure}{Sampling convention (\code{"bootstrap"} or \code{"unique"}) and CV criterion (\code{"deviance"} or \code{"auc"}); deviance is the default for both fitting stages.}
 
 \item{backend}{Learner for the iterative and final fits: one of \code{"glmnet"},
-\code{"ranger"}, \code{"gam"}, or an \code{\link[=xplus_backend]{xplus_backend()}} object for custom backends.
+\code{"ranger"}, \code{"gam"}, \code{"xgboost"}, \code{"lightgbm"}, or an \code{\link[=xplus_backend]{xplus_backend()}}
+object for custom backends.
 \code{alpha} and \code{cv_measure} only configure the \code{"glmnet"} backend.}
 }
 \value{

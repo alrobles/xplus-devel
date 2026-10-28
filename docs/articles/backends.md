@@ -1,0 +1,130 @@
+# Pluggable classification backends
+
+[`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md)
+historically drove every pseudo-labeling iteration and the final refit
+through
+[`glmnet::cv.glmnet()`](https://rdrr.io/pkg/glmnet/man/cv.glmnet.html).
+The development version turns that learner into a pluggable slot: any
+model that can fit weighted binary or fractional targets and return
+probabilities can drive the PLUS loop, and the elastic-net fit remains
+the default. This article describes the backend contract, the built-in
+learners, and the evaluation benchmark.
+
+## Built-in backends
+
+Five backends ship with the package. Pass a name or a configured
+constructor to the `backend` argument of
+[`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md):
+
+| backend | learner | notes |
+|----|----|----|
+| `"glmnet"` | [`glmnet::cv.glmnet()`](https://rdrr.io/pkg/glmnet/man/cv.glmnet.html) | default; honors `alpha` and `cv_measure`, records the CV measure in `history` |
+| `"ranger"` | [`ranger::ranger()`](http://imbs-hl.github.io/ranger/reference/ranger.md) | probability forest for binary targets, regression forest for soft pseudo-labels; OOB `fit_predict` |
+| `"gam"` | [`mgcv::gam()`](https://rdrr.io/pkg/mgcv/man/gam.html) | one smoothing spline per feature; `max_features` guards the dimension cost |
+| `"xgboost"` | [`xgboost::xgb.train()`](https://rdrr.io/pkg/xgboost/man/xgb.train.html) | logistic/regression objectives by target; out-of-fold `fit_predict` |
+| `"lightgbm"` | [`lightgbm::lgb.train()`](https://rdrr.io/pkg/lightgbm/man/lgb.train.html) | fastest tree backend; out-of-fold `fit_predict` |
+
+Constructors expose learner hyperparameters with parsnip-harmonized
+names, e.g. `xplus_backend_ranger(trees = 1000, mtry = 4)` or
+`xplus_backend_xgboost(trees = 200, learn_rate = 0.05)`. `ranger`,
+`mgcv`, `xgboost`, and `lightgbm` are in `Suggests`, so install them to
+use those backends.
+
+[`library`](https://rdrr.io/r/base/library.html)`(`[`xplus`](https://github.com/alrobles/xplus-devel)`)`` ``#> Package 'xplus' version 1.0.2.9000`` ``#> Type 'citation("xplus")' for citing this R package in publications.`` ``sim`` ``<-`` `[`simulate_pu_data`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)`(``n ``=`` ``400``, p ``=`` ``8``, boundary ``=`` ``"nonlinear"``,`` `` prevalence ``=`` ``0.4``, label_propensity ``=`` ``0.5``, seed ``=`` ``11``)`` ``unl`` ``<-`` ``sim``$``y`` ``==`` ``0`` `` ``fit_glmnet`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` ``"glmnet"``, max_iter ``=`` ``30``, seed ``=`` ``3``)`` ``fit_ranger`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` `[`xplus_backend_ranger`](https://alrobles.github.io/xplus/reference/xplus_backend_ranger.md)`(``trees ``=`` ``300``)``,`` `` max_iter ``=`` ``30``, seed ``=`` ``3``)`` `` `[`data.frame`](https://rdrr.io/r/base/data.frame.html)`(`` `` backend ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``"glmnet"``, ``"ranger"``)``,`` `` auc_unlabeled ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(`[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_glmnet``)``)``[``unl``]``)``,`` `` `[`auc`](https://alrobles.github.io/xplus/reference/auc.md)`(``sim``$``z``[``unl``]``, `[`as.numeric`](https://rdrr.io/r/base/numeric.html)`(`[`predict`](https://rdrr.io/r/stats/predict.html)`(``fit_ranger``)``)``[``unl``]``)``)``,`` `` cutoff ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``cutoff``, ``fit_ranger``$``cutoff``)``,`` `` n_iter ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``fit_glmnet``$``n_iter``, ``fit_ranger``$``n_iter``)`` ``)`` ``#> backend auc_unlabeled cutoff n_iter`` ``#> 1 glmnet 0.5000000 0.581250 12`` ``#> 2 ranger 0.8932671 0.140136 9`
+
+On a nonlinear boundary the elastic-net logistic fit collapses toward
+chance while the forest tracks the radial structure; on linear
+boundaries the ranking reverses, which is exactly why the learner is now
+a choice rather than a constant.
+
+## The backend contract
+
+[`xplus_backend()`](https://alrobles.github.io/xplus/reference/xplus_backend.md)
+defines the minimal estimator interface — fit weighted `(x, y)` data,
+then predict probabilities — shared by caret `modelInfo` entries,
+sklearn `fit`/`predict_proba` estimators, and mlr3 `Learner`s:
+
+| field | signature | role |
+|----|----|----|
+| `fit` | `fit(x, y, foldid, weights)` | fit binary or fractional targets; attach `attr(model, "xplus_cv_measure")` to report `"deviance"` or `"auc"` in `history` |
+| `predict` | `predict(model, newx)` | finite probabilities in `[0, 1]` per row |
+| `importance` | `importance(model)` | optional named feature scores for [`get_importance()`](https://alrobles.github.io/xplus/reference/get_importance.md) |
+| `fit_predict` | `fit_predict(model, x)` | optional honest predictions on the fitted rows (see below) |
+| `uses_cv`, `parameters` | — | metadata: CV usage and tunable parameters (caret `modelInfo` style), the latter reserved for a future tuning bridge |
+
+`constant`` ``<-`` `[`xplus_backend`](https://alrobles.github.io/xplus/reference/xplus_backend.md)`(`` `` name ``=`` ``"constant"``,`` `` fit ``=`` ``function``(``x``, ``y``, ``foldid``, ``weights``)`` ``stats``::`[`weighted.mean`](https://rdrr.io/r/stats/weighted.mean.html)`(``y``, ``weights``)``,`` `` predict ``=`` ``function``(``model``, ``newx``)`` `[`rep`](https://rdrr.io/r/base/rep.html)`(``model``, `[`nrow`](https://rdrr.io/r/base/nrow.html)`(``newx``)``)`` ``)`` ``fit`` ``<-`` `[`xplus`](https://alrobles.github.io/xplus/reference/xplus.md)`(``sim``$``x``, ``sim``$``y``, backend ``=`` ``constant``, max_iter ``=`` ``3``)`` ``fit``$``backend``$``name`` ``#> [1] "constant"`
+
+## Honest training predictions
+
+A subtlety of the contract:
+[`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md) stores
+training predictions in `object$pred_y` and calibrates the
+classification cutoff as the `qq` quantile of positive predictions.
+High-capacity learners memorize their own training targets, so in-sample
+scores for labeled positives sit far above anything reachable — with a
+forest, the cutoff landed above every unlabeled score and F1 collapsed
+to zero.
+
+Backends may therefore declare `fit_predict(model, x)`: honest estimates
+on the rows they were fitted on, in the same order. The ranger backend
+supplies out-of-bag predictions; rows never out-of-bag fall back to
+`predict`. The iterative pseudo-label fits deliberately keep plain
+`predict`, since the self-training update relies on in-sample scores,
+but the stored predictions and cutoff are honest — and `predict(fit)`
+without `newx` returns those stored scores for non-glmnet backends, so
+training-data evaluation matches what the model produces on unseen data.
+
+## Benchmark
+
+`inst/benchmarks/backends/compare_backends.R` fits every backend on
+[`simulate_pu_data()`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)
+boundaries (linear, interaction, nonlinear) and scores predictions
+against the hidden labels, overall and inside the unlabeled pool:
+
+``` sh
+Rscript inst/benchmarks/backends/compare_backends.R [outdir] [reps] [quick]
+```
+
+Representative results (3 replicates, n = 1000, p = 12, prevalence 0.4,
+label propensity 0.5):
+
+| backend  | boundary    | AUC (unlabeled) | F1 (unlabeled) | seconds |
+|----------|-------------|-----------------|----------------|---------|
+| glmnet   | linear      | 0.96            | 0.79           | 0.4     |
+| ranger   | linear      | 0.92            | 0.68           | 2.0     |
+| gam      | linear      | 0.95            | 0.79           | 22.0    |
+| xgboost  | linear      | 0.85            | 0.59           | 3.0     |
+| lightgbm | linear      | 0.91            | 0.67           | 2.9     |
+| glmnet   | interaction | 0.72            | 0.48           | 0.4     |
+| ranger   | interaction | 0.74            | 0.48           | 2.1     |
+| gam      | interaction | 0.66            | 0.47           | 163.0   |
+| xgboost  | interaction | 0.72            | 0.47           | 2.8     |
+| lightgbm | interaction | 0.74            | 0.49           | 2.9     |
+| glmnet   | nonlinear   | 0.50            | 0.27           | 0.5     |
+| ranger   | nonlinear   | 0.91            | 0.69           | 2.2     |
+| gam      | nonlinear   | 0.93            | 0.77           | 23.9    |
+| xgboost  | nonlinear   | 0.83            | 0.55           | 1.3     |
+| lightgbm | nonlinear   | 0.89            | 0.65           | 0.9     |
+
+ranger is competitive on every boundary and roughly ten times faster
+than gam, lightgbm is the fastest learner after glmnet, and glmnet
+remains the cheapest option while still winning cleanly on linear
+structure. The boosting backends work out of the box but their default
+hyperparameters are untuned — the nonlinear AUC gap versus gam is
+exactly what a tuning pass should close.
+
+The honest cutoff transfers to held-out data: ranger reaches test-set F1
+of 0.76–0.80 with the same stored cutoff, which the memorized in-sample
+calibration could not.
+
+## What is next
+
+The `parameters` field already declares tunable hyperparameters in caret
+`modelInfo` form (`trees`, `mtry`, `min_n` for ranger; `trees`,
+`learn_rate`, `tree_depth` for the boosting backends; `alpha` for
+glmnet; `k` for gam). It is informational today and is the seam for a
+parsnip-style tuning bridge — the contract only requires
+`fit`/`predict`, so kernel methods, neural learners or a `parsnip` model
+spec can be registered without touching
+[`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md)
+internals.

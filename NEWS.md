@@ -6,7 +6,11 @@
   `cv_measure` configure the glmnet backend only; non-CV backends record
   `"none"` in `history$cv_measure`.
 * New backend constructors `xplus_backend_glmnet()`, `xplus_backend_ranger()`,
-  and `xplus_backend_gam()`; `ranger` and `mgcv` move to `Suggests`.
+  `xplus_backend_gam()`, `xplus_backend_xgboost()`, and
+  `xplus_backend_lightgbm()`; `ranger`, `mgcv`, `xgboost`, and `lightgbm`
+  move to `Suggests`. Boosting backends report out-of-fold `fit_predict`
+  scores from `xgb.cv`/`lgb.cv` on the xplus CV folds, the honest analogue
+  of ranger's out-of-bag predictions.
 * New `get_importance()` returning backend feature scores (elastic-net
   coefficients for glmnet, variable importance for ranger, smooth-term
   significance for gam). `coef()` remains glmnet-only.
@@ -15,6 +19,14 @@
 * `predict()` accepts non-glmnet backends; `s` stays glmnet-specific.
   `summary()`/`print()` report the backend; `predicted_coefficients` is a
   sparse zero column for backends without coefficients.
+* Backends may declare `fit_predict(model, x)` for honest (out-of-bag or
+  held-out-fold) predictions on their fitted rows; `xplus()` uses them after
+  the final fit for the stored predictions and classification cutoff, with
+  non-finite entries falling back to `predict`. The ranger backend
+  implements it via ranger's out-of-bag predictions, fixing a cutoff
+  calibrated on memorized in-sample scores that no prediction could reach
+  (F1 collapsed to zero on hidden positives). `predict()` without `newx`
+  returns the stored honest training predictions on non-glmnet backends.
 
 # xplus 1.0.2
 
@@ -38,7 +50,7 @@ Response-scale model scores are not guaranteed to be calibrated probabilities.
 The package remains `xplus`; the production repository is
 <https://github.com/alrobles/xplus-devel>. Development, audit harnesses and
 historical baselines live in the development repository
-<https://github.com/alrobles/xplus-develeopment>.
+<https://github.com/alrobles/xplus-development>.
 
 ## Breaking interfaces and metrics
 
@@ -113,7 +125,7 @@ historical baselines live in the development repository
   examples target `alrobles/xplus-devel` without embedded credentials.
 * Diagnostic harnesses, the historical numerical-audit baseline and candidate
   diagnostics are maintained in the development repository
-  <https://github.com/alrobles/xplus-develeopment>; they are not part of the
+  <https://github.com/alrobles/xplus-development>; they are not part of the
   production source tree.
 * Document `Rscript -e 'devtools::test(stop_on_failure = TRUE)'` and require
   inspection of FAIL/WARN/SKIP counts. Keep build/check output outside the

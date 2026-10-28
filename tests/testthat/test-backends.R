@@ -8,6 +8,9 @@ test_that("xplus_backend validates its contract", {
   expect_error(xplus_backend("b", fit_fun, predict_fun, importance = 3), "importance")
   expect_error(xplus_backend("b", fit_fun, predict_fun, label = ""), "label")
   expect_error(xplus_backend("b", fit_fun, predict_fun, uses_cv = NA), "uses_cv")
+  expect_error(xplus_backend("b", fit_fun, predict_fun, fit_predict = "x"), "fit_predict")
+  expect_error(xplus_backend("b", fit_fun, predict_fun,
+                             fit_predict = function(m) m), "signature")
 
   backend <- xplus_backend("b", fit_fun, predict_fun)
   expect_s3_class(backend, "xplus_backend")
@@ -131,6 +134,131 @@ test_that("summary and print handle non-glmnet backends", {
   expect_null(out$lambda_min)
   expect_output(print(out), "Backend: ranger")
   expect_output(print(fit), "Backend: ranger")
+})
+
+test_that("fit_predict drives honest cutoff calibration and stored predictions", {
+  skip_if_not_installed("glmnet")
+  set.seed(3)
+  x <- matrix(rnorm(80 * 4), ncol = 4)
+  y <- c(rep(1, 20), rep(0, 60))
+  backend <- xplus_backend(
+    name = "honest-constant",
+    fit = function(x, y, foldid, weights) stats::weighted.mean(y, weights),
+    predict = function(model, newx) rep(model, nrow(newx)),
+    fit_predict = function(model, x) rep(0.3, nrow(x))
+  )
+
+  fit <- xplus(x, y, backend = backend, max_iter = 3)
+
+  # Every row is a fit row in the final stage, so stored predictions and the
+  # positive quantile cutoff come from the honest 0.3 predictions.
+  expect_true(all(as.numeric(fit$pred_y) == 0.3))
+  expect_equal(fit$cutoff, 0.3)
+  expect_equal(as.numeric(predict(fit)), rep(0.3, nrow(x)))
+})
+
+test_that("non-finite fit_predict entries fall back to predict on those rows", {
+  skip_if_not_installed("glmnet")
+  set.seed(4)
+  x <- matrix(rnorm(80 * 4), ncol = 4)
+  y <- c(rep(1, 20), rep(0, 60))
+  backend <- xplus_backend(
+    name = "sparse-honest",
+    fit = function(x, y, foldid, weights) stats::weighted.mean(y, weights),
+    predict = function(model, newx) rep(model, nrow(newx)),
+    fit_predict = function(model, x) replace(rep(NaN, nrow(x)), 1L, 0.4)
+  )
+
+  fit <- xplus(x, y, backend = backend, max_iter = 3)
+
+  expect_true(all(is.finite(as.numeric(fit$pred_y))))
+  # The first fit row is the first positive (row 1 of x); its honest value is
+  # kept while the remaining rows fall back to the weighted-mean prediction.
+  expect_equal(as.numeric(fit$pred_y)[1], 0.4)
+})
+
+test_that("ranger uses out-of-bag predictions for training rows", {
+  skip_if_not_installed("ranger")
+  sim <- simulate_pu_data(n = 400, p = 8, boundary = "nonlinear", seed = 21,
+                          prevalence = 0.4, label_propensity = 0.5)
+
+  fit <- xplus(sim$x, sim$y, backend = "ranger", max_iter = 100, seed = 21)
+
+  pos <- fit$original_y == 1
+  unl <- !pos
+  pred <- as.numeric(fit$pred_y)
+  # Honest positive predictions are far below the memorized in-sample scores
+  # a probability forest produces on its own training rows.
+  insample <- as.numeric(.xplus_backend_predict(fit$backend, fit$xplus, sim$x))
+  expect_true(median(pred[pos]) < median(insample[pos]))
+  # The cutoff tracks the honest positive quantile and stays reachable;
+  # before honest predictions, in-sample memorization pushed the cutoff above
+  # every unlabeled score and collapsed F1 to zero on hidden positives.
+  expect_equal(fit$cutoff, unname(stats::quantile(pred[pos], fit$qq)))
+  expect_true(mean(pred[unl] > fit$cutoff) > 0.05)
+  expect_equal(as.numeric(predict(fit)), pred)
+})
+
+test_that("the xgboost backend fits and calibrates on out-of-fold scores", {
+  skip_if_not_installed("xgboost")
+  sim <- simulate_pu_data(n = 300, p = 6, boundary = "linear", seed = 17,
+                          label_propensity = 0.7)
+
+  fit <- xplus(sim$x, sim$y, backend = "xgboost", max_iter = 5, seed = 17)
+
+  expect_s3_class(fit, "xplus")
+  expect_equal(fit$backend$name, "xgboost")
+  expect_true(all(fit$history$cv_measure == "none"))
+  probs <- predict(fit)
+  expect_true(all(probs >= 0 & probs <= 1))
+  # Stored training predictions are out-of-fold scores from xgb.cv, so the
+  # cutoff stays reachable for unlabeled cases.
+  pos <- fit$original_y == 1
+  pred <- as.numeric(fit$pred_y)
+  expect_equal(fit$cutoff, unname(stats::quantile(pred[pos], fit$qq)))
+  insample <- as.numeric(.xplus_backend_predict(fit$backend, fit$xplus, sim$x))
+  expect_true(median(pred[pos]) <= median(insample[pos]))
+  imp <- get_importance(fit)
+  expect_true(is.numeric(imp) && length(imp) == ncol(sim$x))
+  expect_error(coef(fit), "glmnet")
+})
+
+test_that("xgboost predictions are reproducible under xplus(seed)", {
+  skip_if_not_installed("xgboost")
+  sim <- simulate_pu_data(n = 200, p = 5, seed = 19, label_propensity = 0.7)
+
+  a <- xplus(sim$x, sim$y, backend = "xgboost", max_iter = 4, seed = 23)
+  b <- xplus(sim$x, sim$y, backend = "xgboost", max_iter = 4, seed = 23)
+
+  expect_identical(as.numeric(a$pred_y), as.numeric(b$pred_y))
+})
+
+test_that("the lightgbm backend fits, predicts and records importance", {
+  skip_if_not_installed("lightgbm")
+  sim <- simulate_pu_data(n = 300, p = 6, boundary = "linear", seed = 29,
+                          label_propensity = 0.7)
+
+  fit <- xplus(sim$x, sim$y, backend = "lightgbm", max_iter = 5, seed = 29)
+
+  expect_s3_class(fit, "xplus")
+  expect_equal(fit$backend$name, "lightgbm")
+  probs <- predict(fit)
+  expect_true(all(probs >= 0 & probs <= 1))
+  pos <- fit$original_y == 1
+  expect_equal(fit$cutoff,
+               unname(stats::quantile(as.numeric(fit$pred_y)[pos], fit$qq)))
+  imp <- get_importance(fit)
+  expect_true(is.numeric(imp) && length(imp) == ncol(sim$x))
+  expect_error(coef(fit), "glmnet")
+})
+
+test_that("backend name resolution covers the boosting engines", {
+  skip_if_not_installed("glmnet")
+  expect_equal(.xplus_resolve_backend("xgboost")$name, "xgboost")
+  expect_equal(.xplus_resolve_backend("lightgbm")$name, "lightgbm")
+  expect_error(xplus(matrix(rnorm(60 * 4), ncol = 4),
+                     c(rep(1, 15), rep(0, 45)), backend = "svm",
+                     max_iter = 2), "backend|arg")
 })
 
 test_that("get_importance falls back to glmnet coefficients for legacy objects", {

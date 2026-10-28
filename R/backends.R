@@ -2,7 +2,8 @@
 #'
 #' Describe a learner that [xplus()] uses for both the iterative pseudo-labeling
 #' fits and the final model. Built-in backends are [xplus_backend_glmnet()],
-#' [xplus_backend_ranger()], and [xplus_backend_gam()]; this constructor defines
+#' [xplus_backend_ranger()], [xplus_backend_gam()], [xplus_backend_xgboost()],
+#' and [xplus_backend_lightgbm()]; this constructor defines
 #' custom learners with the same contract.
 #'
 #' @param name Nonempty character scalar identifying the backend.
@@ -25,6 +26,15 @@
 #'   following the caret `modelInfo` convention (columns `parameter`,
 #'   `class`, and `label`); informational only, it enables future tuning
 #'   and AutoML adapters without changing the backend contract.
+#' @param fit_predict Optional function with signature `fit_predict(model, x)`
+#'   returning honest probabilities for the rows passed to `fit`, in the same
+#'   order — out-of-bag or held-out-fold estimates rather than in-sample
+#'   memorization. `xplus()` uses them after the final fit for cutoff
+#'   calibration and the stored training predictions; non-finite entries
+#'   fall back to `predict` on those rows. When `NULL`, `predict` is reused
+#'   on training rows, appropriate for learners that do not memorize
+#'   per-observation targets. Iterative pseudo-label fits always use
+#'   `predict`, which keeps self-training dynamics uniform across backends.
 #' @details The contract mirrors the minimal estimator interface shared by
 #'   caret `modelInfo` entries, sklearn `fit`/`predict_proba` estimators
 #'   (the basis of PU wrappers such as `ElkanotoPuClassifier`), and mlr3
@@ -46,7 +56,7 @@
 #'   backend = constant, max_iter = 3)
 #' @export
 xplus_backend <- function(name, fit, predict, importance = NULL, label = name,
-                          uses_cv = FALSE, parameters = NULL) {
+                          uses_cv = FALSE, parameters = NULL, fit_predict = NULL) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(trimws(name))) {
     stop("`name` must be a nonempty character scalar.", call. = FALSE)
   }
@@ -65,6 +75,11 @@ xplus_backend <- function(name, fit, predict, importance = NULL, label = name,
   if (!is.logical(uses_cv) || length(uses_cv) != 1L || is.na(uses_cv)) {
     stop("`uses_cv` must be TRUE or FALSE.", call. = FALSE)
   }
+  if (!is.null(fit_predict) &&
+      (!is.function(fit_predict) || length(formals(fit_predict)) < 2L)) {
+    stop("`fit_predict` must be NULL or a function with signature `fit_predict(model, x)`.",
+         call. = FALSE)
+  }
   if (!is.null(parameters)) {
     if (!is.data.frame(parameters) || !all(c("parameter", "class", "label") %in% names(parameters)) ||
         any(!nzchar(parameters$parameter))) {
@@ -74,7 +89,8 @@ xplus_backend <- function(name, fit, predict, importance = NULL, label = name,
   }
   structure(
     list(name = name, label = label, fit = fit, predict = predict,
-         importance = importance, uses_cv = uses_cv, parameters = parameters),
+         importance = importance, uses_cv = uses_cv,
+         parameters = parameters, fit_predict = fit_predict),
     class = "xplus_backend"
   )
 }
@@ -92,6 +108,7 @@ print.xplus_backend <- function(x, ...) {
   cat("Name:", x$name, "\n")
   cat("Internal cross-validation:", x$uses_cv, "\n")
   cat("Feature importance:", !is.null(x$importance), "\n")
+  cat("Honest training predictions:", !is.null(x$fit_predict), "\n")
   if (!is.null(x$parameters) && nrow(x$parameters)) {
     cat("Tunable parameters:", paste(x$parameters$parameter, collapse = ", "), "\n")
   }
@@ -145,6 +162,8 @@ xplus_backend_glmnet <- function(alpha = 1, cv_measure = c("deviance", "auc")) {
 #' forest and fractional pseudo-labels a regression forest, so soft final-fit
 #' targets are supported natively. The backend performs no internal
 #' cross-validation; its hyperparameters are fixed at construction.
+#' Out-of-bag predictions supply `fit_predict`, so the stored predictions and
+#' classification cutoff use honest scores rather than in-sample memorization.
 #'
 #' @param trees Number of trees (ranger `num.trees`); the parsnip-harmonized
 #'   name is used so a parsnip bridge can map `rand_forest(trees = ...)` later.
@@ -217,6 +236,14 @@ xplus_backend_ranger <- function(trees = 500, mtry = NULL, min_n = 1,
       if (model$mode == "probability") prob <- prob[, "1"]
       pmin(pmax(as.numeric(prob), 0), 1)
     },
+    fit_predict = function(model, x) {
+      # ranger stores out-of-bag predictions on the training rows in
+      # `predictions`; rows never out-of-bag get NaN and fall back to
+      # in-sample predictions upstream.
+      prob <- model$model$predictions
+      if (model$mode == "probability") prob <- prob[, "1"]
+      as.numeric(prob)
+    },
     importance = function(model) {
       imp <- model$model$variable.importance
       if (!length(imp)) return(NULL)
@@ -224,6 +251,225 @@ xplus_backend_ranger <- function(trees = 500, mtry = NULL, min_n = 1,
         names(imp) <- model$features
       }
       imp
+    }
+  )
+}
+
+#' XGBoost gradient-boosting backend for xplus
+#'
+#' Gradient-boosted trees via [xgboost::xgb.train()]. Binary targets use
+#' `binary:logistic`, fractional pseudo-labels `reg:squarederror` (clipped to
+#' `[0, 1]` on prediction). Hyperparameters use parsnip-harmonized names so a
+#' `boost_tree()` spec can map onto them later. Boosting memorizes training
+#' targets like any high-capacity learner, so `fit_predict` returns
+#' out-of-fold predictions computed with `xgb.cv` on the folds `xplus()`
+#' already assigned — the same honest-score role ranger's OOB plays, at the
+#' cost of one extra cross-validation pass per final fit.
+#'
+#' @param trees Number of boosting rounds (xgboost `nrounds`).
+#' @param learn_rate Shrinkage step (xgboost `eta`).
+#' @param tree_depth Maximum tree depth (xgboost `max_depth`).
+#' @param min_n Minimum child weight (xgboost `min_child_weight`).
+#' @param mtry Number of features sampled per split; `NULL` uses all features.
+#'   Converted to `colsample_bynode` as a proportion of `ncol(x)`.
+#' @param sample_size Row subsampling fraction per tree (xgboost `subsample`).
+#' @param loss_reduction Minimum loss reduction to split (xgboost `gamma`).
+#' @param num.threads OpenMP threads (xgboost `nthread`).
+#' @param seed Optional seed passed to each fit; `NULL` draws from R's RNG per
+#'   fit so that `xplus(seed = ...)` remains reproducible.
+#'
+#' @return An `"xplus_backend"` object.
+#' @seealso [xplus_backend()], [xplus()], [xplus_backend_ranger()]
+#' @examples
+#' \dontrun{
+#' fit <- xplus(x, y, backend = xplus_backend_xgboost(trees = 200))
+#' }
+#' @export
+xplus_backend_xgboost <- function(trees = 100, learn_rate = 0.3, tree_depth = 6,
+                                  min_n = 1, mtry = NULL, sample_size = 1,
+                                  loss_reduction = 0, num.threads = 1,
+                                  seed = NULL) {
+  .xplus_scalar(trees, "trees", 1, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(learn_rate, "learn_rate", 0, 1)
+  .xplus_scalar(tree_depth, "tree_depth", 1, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(min_n, "min_n", 0, Inf)
+  if (!is.null(mtry)) .xplus_scalar(mtry, "mtry", 1, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(sample_size, "sample_size", 0, 1, lower_open = TRUE)
+  .xplus_scalar(loss_reduction, "loss_reduction", 0, Inf)
+  if (!is.null(num.threads)) .xplus_scalar(num.threads, "num.threads", 1, .Machine$integer.max, integer = TRUE)
+  if (!is.null(seed)) .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
+  xplus_backend(
+    name = "xgboost",
+    label = "gradient-boosted trees (xgboost)",
+    uses_cv = FALSE,
+    parameters = data.frame(
+      parameter = c("trees", "learn_rate", "tree_depth", "min_n", "mtry",
+                    "sample_size", "loss_reduction"),
+      class = c("integer", "numeric", "integer", "numeric", "integer",
+                "numeric", "numeric"),
+      label = c("Number of trees", "Learning rate", "Tree depth",
+                "Minimal node size", "Randomly selected predictors",
+                "Proportion of rows sampled", "Minimum loss reduction"),
+      stringsAsFactors = FALSE
+    ),
+    fit = function(x, y, foldid, weights) {
+      if (!requireNamespace("xgboost", quietly = TRUE)) {
+        stop("The 'xgboost' backend requires the xgboost package to be installed.", call. = FALSE)
+      }
+      features <- colnames(x)
+      if (is.null(features)) features <- paste0("V", seq_len(ncol(x)))
+      binary <- all(y %in% c(0, 1))
+      colnames(x) <- features
+      params <- list(
+        objective = if (binary) "binary:logistic" else "reg:squarederror",
+        max_depth = tree_depth, eta = learn_rate, gamma = loss_reduction,
+        min_child_weight = min_n, subsample = sample_size,
+        colsample_bynode = if (is.null(mtry)) 1 else min(1, mtry / ncol(x)),
+        nthread = if (is.null(num.threads)) 1 else num.threads,
+        seed = if (is.null(seed)) sample.int(.Machine$integer.max, 1L) else seed
+      )
+      dtrain <- xgboost::xgb.DMatrix(x, label = y, weight = weights)
+      booster <- xgboost::xgb.train(params, dtrain, nrounds = trees, verbose = 0)
+      structure(list(model = booster, binary = binary, features = features,
+                     foldid = foldid, weights = weights, y = y,
+                     params = params, trees = trees),
+                class = "xplus_xgb_fit")
+    },
+    predict = function(model, newx) {
+      colnames(newx) <- model$features
+      prob <- stats::predict(model$model, xgboost::xgb.DMatrix(newx))
+      pmin(pmax(as.numeric(prob), 0), 1)
+    },
+    fit_predict = function(model, x) {
+      # Out-of-fold predictions on the xplus CV folds: each row is scored by
+      # the booster that never saw it, the honest analogue of ranger's OOB.
+      colnames(x) <- model$features
+      dtrain <- xgboost::xgb.DMatrix(x, label = model$y, weight = model$weights)
+      folds <- lapply(sort(unique(model$foldid)), function(k) which(model$foldid == k))
+      cv <- xgboost::xgb.cv(model$params, dtrain, nrounds = model$trees,
+                            folds = folds, prediction = TRUE, verbose = 0)
+      prob <- if (!is.null(cv$cv_predict)) cv$cv_predict$pred else cv$pred
+      pmin(pmax(as.numeric(prob), 0), 1)
+    },
+    importance = function(model) {
+      imp <- xgboost::xgb.importance(feature_names = model$features,
+                                   model = model$model)
+      scores <- imp$Gain
+      full <- stats::setNames(rep(0, length(model$features)), model$features)
+      full[match(imp$Feature, model$features)] <- scores
+      full
+    }
+  )
+}
+
+#' LightGBM gradient-boosting backend for xplus
+#'
+#' Gradient-boosted trees via [lightgbm::lgb.train()]. Binary targets use the
+#' `"binary"` objective, fractional pseudo-labels `"regression"` (clipped to
+#' `[0, 1]` on prediction). Hyperparameters use parsnip-harmonized names.
+#' `fit_predict` returns out-of-fold predictions via `lgb.cv` on the folds
+#' `xplus()` assigns, so the classification cutoff is calibrated on honest
+#' scores rather than memorized ones.
+#'
+#' @param trees Number of boosting rounds (lightgbm `num_iterations`).
+#' @param learn_rate Shrinkage step (lightgbm `learning_rate`).
+#' @param tree_depth Maximum tree depth (lightgbm `max_depth`; `-1` unbounded).
+#' @param min_n Minimum observations per leaf (lightgbm `min_data_in_leaf`).
+#' @param mtry Number of features sampled per iteration; `NULL` uses all.
+#'   Converted to `feature_fraction` as a proportion of `ncol(x)`.
+#' @param sample_size Row subsampling fraction per iteration (lightgbm
+#'   `bagging_fraction`; enables bagging when below 1).
+#' @param loss_reduction Minimum gain to split (lightgbm `min_gain_to_split`).
+#' @param num.threads OpenMP threads (lightgbm `num_threads`).
+#' @param seed Optional seed passed to each fit; `NULL` draws from R's RNG per
+#'   fit so that `xplus(seed = ...)` remains reproducible.
+#'
+#' @return An `"xplus_backend"` object.
+#' @seealso [xplus_backend()], [xplus()], [xplus_backend_xgboost()]
+#' @examples
+#' \dontrun{
+#' fit <- xplus(x, y, backend = xplus_backend_lightgbm(trees = 200))
+#' }
+#' @export
+xplus_backend_lightgbm <- function(trees = 100, learn_rate = 0.1, tree_depth = -1,
+                                   min_n = 20, mtry = NULL, sample_size = 1,
+                                   loss_reduction = 0, num.threads = 1,
+                                   seed = NULL) {
+  .xplus_scalar(trees, "trees", 1, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(learn_rate, "learn_rate", 0, 1)
+  .xplus_scalar(tree_depth, "tree_depth", -1, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(min_n, "min_n", 1, .Machine$integer.max, integer = TRUE)
+  if (!is.null(mtry)) .xplus_scalar(mtry, "mtry", 1, .Machine$integer.max, integer = TRUE)
+  .xplus_scalar(sample_size, "sample_size", 0, 1, lower_open = TRUE)
+  .xplus_scalar(loss_reduction, "loss_reduction", 0, Inf)
+  if (!is.null(num.threads)) .xplus_scalar(num.threads, "num.threads", 1, .Machine$integer.max, integer = TRUE)
+  if (!is.null(seed)) .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
+  xplus_backend(
+    name = "lightgbm",
+    label = "gradient-boosted trees (lightgbm)",
+    uses_cv = FALSE,
+    parameters = data.frame(
+      parameter = c("trees", "learn_rate", "tree_depth", "min_n", "mtry",
+                    "sample_size", "loss_reduction"),
+      class = c("integer", "numeric", "integer", "integer", "integer",
+                "numeric", "numeric"),
+      label = c("Number of trees", "Learning rate", "Tree depth",
+                "Minimal data in leaf", "Randomly selected predictors",
+                "Proportion of rows sampled", "Minimum gain to split"),
+      stringsAsFactors = FALSE
+    ),
+    fit = function(x, y, foldid, weights) {
+      if (!requireNamespace("lightgbm", quietly = TRUE)) {
+        stop("The 'lightgbm' backend requires the lightgbm package to be installed.", call. = FALSE)
+      }
+      features <- colnames(x)
+      if (is.null(features)) features <- paste0("V", seq_len(ncol(x)))
+      binary <- all(y %in% c(0, 1))
+      colnames(x) <- features
+      params <- list(
+        objective = if (binary) "binary" else "regression",
+        num_iterations = trees, learning_rate = learn_rate,
+        max_depth = tree_depth, min_data_in_leaf = min_n,
+        feature_fraction = if (is.null(mtry)) 1 else min(1, mtry / ncol(x)),
+        bagging_fraction = sample_size,
+        bagging_freq = if (sample_size < 1) 1L else 0L,
+        min_gain_to_split = loss_reduction,
+        num_threads = if (is.null(num.threads)) 1 else num.threads,
+        seed = if (is.null(seed)) sample.int(.Machine$integer.max, 1L) else seed,
+        verbose = -1
+      )
+      dtrain <- lightgbm::lgb.Dataset(x, label = y, weight = weights)
+      booster <- lightgbm::lgb.train(params, dtrain, verbose = -1)
+      structure(list(model = booster, binary = binary, features = features,
+                     foldid = foldid, weights = weights, y = y,
+                     params = params, trees = trees),
+                class = "xplus_lgb_fit")
+    },
+    predict = function(model, newx) {
+      colnames(newx) <- model$features
+      prob <- stats::predict(model$model, newx)
+      pmin(pmax(as.numeric(prob), 0), 1)
+    },
+    fit_predict = function(model, x) {
+      # lgb.cv has no stored out-of-fold predictions; score each row with the
+      # booster of the fold that held it out.
+      colnames(x) <- model$features
+      dtrain <- lightgbm::lgb.Dataset(x, label = model$y, weight = model$weights)
+      folds <- lapply(sort(unique(model$foldid)), function(k) which(model$foldid == k))
+      cv <- lightgbm::lgb.cv(model$params, dtrain, folds = folds,
+                             verbose = -1, showsd = FALSE, stratified = FALSE)
+      oof <- numeric(nrow(x))
+      for (k in seq_along(folds)) {
+        oof[folds[[k]]] <- stats::predict(cv$boosters[[k]]$booster,
+                                         x[folds[[k]], , drop = FALSE])
+      }
+      pmin(pmax(as.numeric(oof), 0), 1)
+    },
+    importance = function(model) {
+      imp <- lightgbm::lgb.importance(model$model, percentage = TRUE)
+      full <- stats::setNames(rep(0, length(model$features)), model$features)
+      full[match(imp$Feature, model$features)] <- imp$Gain
+      full
     }
   )
 }
@@ -305,14 +551,16 @@ xplus_backend_gam <- function(k = NULL, method = "REML", max_features = 100) {
 # arguments apply to the default glmnet backend only.
 .xplus_resolve_backend <- function(backend, alpha = 1, cv_measure = "deviance") {
   if (is.character(backend) && length(backend) == 1L && !is.na(backend)) {
-    return(switch(match.arg(backend, c("glmnet", "ranger", "gam")),
+    return(switch(match.arg(backend, c("glmnet", "ranger", "gam", "xgboost", "lightgbm")),
       glmnet = xplus_backend_glmnet(alpha = alpha, cv_measure = cv_measure),
       ranger = xplus_backend_ranger(),
-      gam = xplus_backend_gam()
+      gam = xplus_backend_gam(),
+      xgboost = xplus_backend_xgboost(),
+      lightgbm = xplus_backend_lightgbm()
     ))
   }
   if (inherits(backend, "xplus_backend")) return(backend)
-  stop("`backend` must be one of \"glmnet\", \"ranger\", \"gam\", or an `xplus_backend` object.",
+  stop("`backend` must be one of \"glmnet\", \"ranger\", \"gam\", \"xgboost\", \"lightgbm\", or an `xplus_backend` object.",
        call. = FALSE)
 }
 
@@ -346,6 +594,36 @@ xplus_backend_gam <- function(k = NULL, method = "REML", max_features = 100) {
     }
   )
   matrix(.xplus_probabilities(prob, n), ncol = 1L)
+}
+
+# Honest predictions on the rows a backend was fitted on, returned in the
+# same order. Backends without a `fit_predict` hook reuse `predict`, matching
+# learners that do not memorize per-observation targets. Non-finite honest
+# estimates (e.g. rows in-bag in every ranger tree) fall back to in-sample
+# predictions for those rows only.
+.xplus_backend_fit_predict <- function(backend, model, x) {
+  if (is.null(backend$fit_predict)) {
+    return(.xplus_backend_predict(backend, model, x, nrow(x)))
+  }
+  prob <- tryCatch(
+    backend$fit_predict(model, x),
+    error = function(e) {
+      stop(sprintf("Backend '%s' failed to compute honest training predictions: %s",
+                   backend$name, conditionMessage(e)), call. = FALSE)
+    }
+  )
+  if (!is.numeric(prob) || is.complex(prob) || length(prob) != nrow(x)) {
+    stop(sprintf("Backend '%s' `fit_predict` must return one prediction per fitted row.",
+                 backend$name), call. = FALSE)
+  }
+  prob <- as.numeric(prob)
+  missing <- !is.finite(prob)
+  if (any(missing)) {
+    replacement <- .xplus_backend_predict(backend, model, x[missing, , drop = FALSE],
+                                          sum(missing))
+    prob[missing] <- as.numeric(replacement)
+  }
+  matrix(.xplus_probabilities(prob, nrow(x)), ncol = 1L)
 }
 
 # Feature frame with synthetic column names; positional ordering is preserved,

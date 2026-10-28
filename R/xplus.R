@@ -35,7 +35,8 @@
 #' and is recorded with the actual fitting targets and the iteration history.
 #' @param sampling,cv_measure Sampling convention (`"bootstrap"` or `"unique"`) and CV criterion (`"deviance"` or `"auc"`); deviance is the default for both fitting stages.
 #' @param backend Learner for the iterative and final fits: one of `"glmnet"`,
-#'   `"ranger"`, `"gam"`, or an [xplus_backend()] object for custom backends.
+#'   `"ranger"`, `"gam"`, `"xgboost"`, `"lightgbm"`, or an [xplus_backend()]
+#'   object for custom backends.
 #'   `alpha` and `cv_measure` only configure the `"glmnet"` backend.
 #' @return An object of class `"xplus"` containing predictions, original and final labels, pseudo-labels, fallback metadata, sampling counts, and history.
 #' @references Zhou et al. (2022). doi:10.1371/journal.pcbi.1009956
@@ -176,7 +177,10 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   final_labels <- targets$labels
   final_step <- .xplus_backend_fit(backend, x, final_labels, final_foldid, rep(1, n))
   fit_pi <- final_step$model
-  pred_y <- .xplus_backend_predict(backend, fit_pi, x, n)
+  # Stored predictions and the cutoff use honest (e.g. out-of-bag) scores
+  # where the backend provides them; in-sample memorized probabilities would
+  # push the positive quantile cutoff above any reachable score.
+  pred_y <- .xplus_backend_fit_predict(backend, fit_pi, x)
   cutoff <- stats::quantile(pred_y[positive_id], qq, names = FALSE)
   pred_coef1 <- if (backend$name == "glmnet") {
     stats::coef(fit_pi, s = "lambda.min")

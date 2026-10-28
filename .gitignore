@@ -3,3 +3,4 @@
 .Ruserdata
 .Rproj.user
 inst/doc
+inst/benchmarks/backends/results/

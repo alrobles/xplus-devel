@@ -41,6 +41,8 @@ Random forests via \code{\link[ranger:ranger]{ranger::ranger()}}. Binary targets
 forest and fractional pseudo-labels a regression forest, so soft final-fit
 targets are supported natively. The backend performs no internal
 cross-validation; its hyperparameters are fixed at construction.
+Out-of-bag predictions supply \code{fit_predict}, so the stored predictions and
+classification cutoff use honest scores rather than in-sample memorization.
 }
 \examples{
 \dontrun{

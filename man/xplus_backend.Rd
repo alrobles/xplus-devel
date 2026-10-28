@@ -11,7 +11,8 @@ xplus_backend(
   importance = NULL,
   label = name,
   uses_cv = FALSE,
-  parameters = NULL
+  parameters = NULL,
+  fit_predict = NULL
 )
 }
 \arguments{
@@ -41,6 +42,16 @@ cross-validation whose measure is recorded in the iteration history.}
 following the caret \code{modelInfo} convention (columns \code{parameter},
 \code{class}, and \code{label}); informational only, it enables future tuning
 and AutoML adapters without changing the backend contract.}
+
+\item{fit_predict}{Optional function with signature \code{fit_predict(model, x)}
+returning honest probabilities for the rows passed to \code{fit}, in the same
+order — out-of-bag or held-out-fold estimates rather than in-sample
+memorization. \code{xplus()} uses them after the final fit for cutoff
+calibration and the stored training predictions; non-finite entries
+fall back to \code{predict} on those rows. When \code{NULL}, \code{predict} is reused
+on training rows, appropriate for learners that do not memorize
+per-observation targets. Iterative pseudo-label fits always use
+\code{predict}, which keeps self-training dynamics uniform across backends.}
 }
 \value{
 An object of class \code{"xplus_backend"} accepted by the \code{backend}
@@ -49,7 +60,8 @@ argument of \code{\link[=xplus]{xplus()}}.
 \description{
 Describe a learner that \code{\link[=xplus]{xplus()}} uses for both the iterative pseudo-labeling
 fits and the final model. Built-in backends are \code{\link[=xplus_backend_glmnet]{xplus_backend_glmnet()}},
-\code{\link[=xplus_backend_ranger]{xplus_backend_ranger()}}, and \code{\link[=xplus_backend_gam]{xplus_backend_gam()}}; this constructor defines
+\code{\link[=xplus_backend_ranger]{xplus_backend_ranger()}}, \code{\link[=xplus_backend_gam]{xplus_backend_gam()}}, \code{\link[=xplus_backend_xgboost]{xplus_backend_xgboost()}},
+and \code{\link[=xplus_backend_lightgbm]{xplus_backend_lightgbm()}}; this constructor defines
 custom learners with the same contract.
 }
 \details{
