@@ -40,6 +40,8 @@
   : Print method for xplus_backend objects
 - [`print(`*`<xplus_pu_data>`*`)`](https://alrobles.github.io/xplus/reference/print.xplus_pu_data.md)
   : Print method for xplus_pu_data objects
+- [`pu_mask()`](https://alrobles.github.io/xplus/reference/pu_mask.md) :
+  Convert true binary labels into PU labels
 - [`pu_score()`](https://alrobles.github.io/xplus/reference/pu_score.md)
   : PU-valid score for a fitted xplus object
 - [`simulate_pu_data()`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)

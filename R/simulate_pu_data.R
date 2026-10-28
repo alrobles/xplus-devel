@@ -11,7 +11,10 @@
 #' @param p Number of features.
 #' @param boundary Decision boundary driving the positive probability:
 #'   `"linear"` (sparse linear predictor), `"interaction"` (pure pairwise
-#'   products), or `"nonlinear"` (radial, positives outside a sphere).
+#'   products), `"nonlinear"` (radial, positives outside a sphere),
+#'   `"xor"` (checkerboard of feature-sign products, unlearnable by
+#'   additive learners), or `"mixture"` (positives concentrated near two
+#'   cluster centers, multimodal).
 #' @param prevalence Target fraction of true positives in `[0, 1]`.
 #' @param label_propensity Constant probability that a true positive is
 #'   observed as a labeled positive, in `(0, 1]`.
@@ -31,7 +34,8 @@
 #' auc(sim$z, as.numeric(predict(fit)))
 #' @export
 simulate_pu_data <- function(n = 500, p = 10,
-                             boundary = c("linear", "interaction", "nonlinear"),
+                             boundary = c("linear", "interaction", "nonlinear",
+                                          "xor", "mixture"),
                              prevalence = 0.5, label_propensity = 0.5,
                              n_informative = min(5L, p), sharpness = 2,
                              seed = NULL) {
@@ -64,7 +68,22 @@ simulate_pu_data <- function(n = 500, p = 10,
       } else 0
       eta + if (k %% 2L == 1L) x[, k] else 0
     },
-    nonlinear = rowSums(x[, seq_len(k), drop = FALSE]^2) - k
+    nonlinear = rowSums(x[, seq_len(k), drop = FALSE]^2) - k,
+    xor = {
+      ke <- k - (k %% 2L)
+      if (ke < 2L) 0 else {
+        pairs <- matrix(seq_len(ke), nrow = 2)
+        rowSums(vapply(seq_len(ncol(pairs)),
+                       function(j) sign(x[, pairs[1, j]]) * sign(x[, pairs[2, j]]),
+                       numeric(n)))
+      }
+    },
+    mixture = {
+      centers <- list(rep(1.5, k), rep(-1.5, k))
+      d1 <- rowSums((x[, seq_len(k), drop = FALSE] - rep(centers[[1]], each = n))^2)
+      d2 <- rowSums((x[, seq_len(k), drop = FALSE] - rep(centers[[2]], each = n))^2)
+      k - pmin(d1, d2)
+    }
   )
   threshold <- stats::quantile(eta, 1 - prevalence, names = FALSE)
   p_true <- as.numeric(stats::plogis(sharpness * (eta - threshold)))

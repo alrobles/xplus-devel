@@ -414,6 +414,11 @@ hyperparameter settings correctly (300 trees at <code>learn_rate</code>
 0.05 beat the smaller, faster settings). Linear learners win on sparse
 text; forests win on curved boundaries. The leaderboard makes that
 choice an empirical one.</p>
+<p>The same pattern holds on open binary datasets PU-ified with
+<code><a href="../reference/pu_mask.html">pu_mask()</a></code> — on UCI spambase (ranger 0.852 ≈ glmnet 0.845
+&gt; xgboost 0.807) and mushroom (xgboost 0.843 &gt; lightgbm 0.836 &gt;
+glmnet 0.818), the winner changes with the feature geometry, and every
+ranking was produced without ever reading the hidden negatives.</p>
 </div>
 <div class="section level2">
 <h2 id="what-is-next">What is next<a class="anchor" aria-label="anchor" href="#what-is-next"></a>

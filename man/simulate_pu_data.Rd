@@ -7,7 +7,7 @@
 simulate_pu_data(
   n = 500,
   p = 10,
-  boundary = c("linear", "interaction", "nonlinear"),
+  boundary = c("linear", "interaction", "nonlinear", "xor", "mixture"),
   prevalence = 0.5,
   label_propensity = 0.5,
   n_informative = min(5L, p),
@@ -22,7 +22,10 @@ simulate_pu_data(
 
 \item{boundary}{Decision boundary driving the positive probability:
 \code{"linear"} (sparse linear predictor), \code{"interaction"} (pure pairwise
-products), or \code{"nonlinear"} (radial, positives outside a sphere).}
+products), \code{"nonlinear"} (radial, positives outside a sphere),
+\code{"xor"} (checkerboard of feature-sign products, unlearnable by
+additive learners), or \code{"mixture"} (positives concentrated near two
+cluster centers, multimodal).}
 
 \item{prevalence}{Target fraction of true positives in \verb{[0, 1]}.}
 

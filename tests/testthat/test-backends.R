@@ -399,3 +399,25 @@ test_that("xplus_grid compares names, specs and constructor grids", {
   lf <- xplus_grid(sim$x, sim$y, list(broken, "glmnet"), max_iter = 3, seed = 53)
   expect_true(any(!is.na(lf$error)))
 })
+
+test_that("simulate_pu_data supports xor and mixture boundaries", {
+  skip_if_not_installed("ranger")
+  for (b in c("xor", "mixture")) {
+    sim <- simulate_pu_data(n = 400, p = 6, boundary = b, seed = 61,
+                            prevalence = 0.4, label_propensity = 0.5)
+    expect_s3_class(sim, "xplus_pu_data")
+    expect_true(sum(sim$y) >= 3)
+    fit <- xplus(sim$x, sim$y, backend = "ranger", max_iter = 5, seed = 61)
+    expect_true(auc(sim$z, as.numeric(fit$pred_y)) > 0.6)
+  }
+})
+
+test_that("pu_mask masks positives under SCAR and validates inputs", {
+  z <- rbinom(200, 1, 0.5)
+  y <- pu_mask(z, label_propensity = 0.4, seed = 7)
+  expect_true(all(y %in% c(0, 1)))
+  expect_true(all(y[z == 0] == 0))
+  expect_true(sum(y) < sum(z))
+  expect_error(pu_mask(c(0, 2, 1)), "binary")
+  expect_error(pu_mask(z, 0), "label_propensity")
+})

@@ -146,6 +146,13 @@ settings correctly (300 trees at `learn_rate` 0.05 beat the smaller,
 faster settings). Linear learners win on sparse text; forests win on
 curved boundaries. The leaderboard makes that choice an empirical one.
 
+The same pattern holds on open binary datasets PU-ified with
+[`pu_mask()`](https://alrobles.github.io/xplus/reference/pu_mask.md) —
+on UCI spambase (ranger 0.852 ≈ glmnet 0.845 \> xgboost 0.807) and
+mushroom (xgboost 0.843 \> lightgbm 0.836 \> glmnet 0.818), the winner
+changes with the feature geometry, and every ranking was produced
+without ever reading the hidden negatives.
+
 ## What is next
 
 The `parameters` field already declares tunable hyperparameters in caret

@@ -14,7 +14,7 @@ and everything else remains unlabeled.
 simulate_pu_data(
   n = 500,
   p = 10,
-  boundary = c("linear", "interaction", "nonlinear"),
+  boundary = c("linear", "interaction", "nonlinear", "xor", "mixture"),
   prevalence = 0.5,
   label_propensity = 0.5,
   n_informative = min(5L, p),
@@ -36,8 +36,11 @@ simulate_pu_data(
 - boundary:
 
   Decision boundary driving the positive probability: `"linear"` (sparse
-  linear predictor), `"interaction"` (pure pairwise products), or
-  `"nonlinear"` (radial, positives outside a sphere).
+  linear predictor), `"interaction"` (pure pairwise products),
+  `"nonlinear"` (radial, positives outside a sphere), `"xor"`
+  (checkerboard of feature-sign products, unlearnable by additive
+  learners), or `"mixture"` (positives concentrated near two cluster
+  centers, multimodal).
 
 - prevalence:
 

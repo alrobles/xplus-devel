@@ -4,3 +4,4 @@
 .Rproj.user
 inst/doc
 inst/benchmarks/backends/results/
+inst/benchmarks/realdata/data/

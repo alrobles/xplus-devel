@@ -30,6 +30,10 @@
   SCAR. `xplus_grid()` compares backend names/specs or evaluates a
   constructor over a `params` data-frame grid on shared seeds, returning a
   ranked leaderboard with per-candidate errors captured.
+* `simulate_pu_data()` gains `"xor"` (checkerboard sign interactions) and
+  `"mixture"` (multimodal positive clusters) boundaries, and new
+  `pu_mask()` converts any open binary dataset into PU labels under SCAR —
+  used by `inst/benchmarks/realdata` on UCI spambase and mushroom.
 * New `get_importance()` returning backend feature scores (elastic-net
   coefficients for glmnet, variable importance for ranger, smooth-term
   significance for gam). `coef()` remains glmnet-only.
