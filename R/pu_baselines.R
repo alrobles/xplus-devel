@@ -68,10 +68,7 @@ xplus_naive <- function(x, y, backend = "glmnet", seed = NULL, nfolds = 10,
 .xplus_baseline_prep <- function(x, y, backend, seed, nfolds, alpha, cv_measure) {
   x <- .xplus_matrix(x)
   y <- .xplus_binary_labels(y, nrow(x), require_both = TRUE)
-  if (!is.null(seed)) {
-    .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
-    set.seed(seed)
-  }
+  if (!is.null(seed)) .xplus_local_seed(seed)
   nfolds <- .xplus_scalar(nfolds, "nfolds", 3, nrow(x), integer = TRUE)
   backend <- .xplus_resolve_backend(backend, alpha, cv_measure)
   foldid <- stratified_foldid(y, as.integer(nfolds))

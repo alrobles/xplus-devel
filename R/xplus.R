@@ -86,10 +86,7 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   variances <- apply(x, 2, stats::var)
   if (any(!is.finite(variances))) stop("Feature variance is non-finite; rescale `x` before fitting.", call. = FALSE)
   if (!any(variances > 0)) stop("All feature columns have zero variance at numerical precision; rescale or change `x`.", call. = FALSE)
-  if (!is.null(seed)) {
-    .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
-    set.seed(seed)
-  }
+  if (!is.null(seed)) .xplus_local_seed(seed)
   pseudo_labels <- as.numeric(y)
   iterative_path <- if (learning_rate < 1) "continuous_enhancement" else "current"
   remaining <- rep(as.numeric(sample_use_time), n)

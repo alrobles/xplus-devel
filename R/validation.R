@@ -58,3 +58,19 @@
   if (!is.null(n) && NROW(p) != n) stop("Prediction rows do not match the observations.", call. = FALSE)
   p
 }
+
+.xplus_local_seed <- function(seed) {
+  .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
+  caller <- parent.frame()
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    state <- get(".Random.seed", envir = .GlobalEnv)
+    expr <- substitute(assign(".Random.seed", S, envir = .GlobalEnv),
+                       list(S = state))
+  } else {
+    expr <- quote(if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+      rm(.Random.seed, envir = .GlobalEnv))
+  }
+  do.call(on.exit, list(expr, TRUE), envir = caller)
+  set.seed(seed)
+  invisible(NULL)
+}

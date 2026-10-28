@@ -46,10 +46,7 @@ simulate_pu_data <- function(n = 500, p = 10,
   .xplus_scalar(label_propensity, "label_propensity", 0, 1, lower_open = TRUE)
   .xplus_scalar(n_informative, "n_informative", 1, p, integer = TRUE)
   .xplus_scalar(sharpness, "sharpness", 0, Inf, lower_open = TRUE)
-  if (!is.null(seed)) {
-    .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
-    set.seed(seed)
-  }
+  if (!is.null(seed)) .xplus_local_seed(seed)
   x <- matrix(stats::rnorm(n * p), nrow = n, ncol = p,
               dimnames = list(NULL, paste0("x", seq_len(p))))
   k <- as.integer(n_informative)

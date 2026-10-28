@@ -26,10 +26,7 @@ pu_mask <- function(z, label_propensity = 0.5, seed = NULL) {
     stop("`z` must be a binary numeric vector.", call. = FALSE)
   }
   .xplus_scalar(label_propensity, "label_propensity", 0, 1, lower_open = TRUE)
-  if (!is.null(seed)) {
-    .xplus_scalar(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
-    set.seed(seed)
-  }
+  if (!is.null(seed)) .xplus_local_seed(seed)
   y <- as.integer(z == 1L & stats::runif(length(z)) < label_propensity)
   if (sum(y) < 3L) {
     stop("`pu_mask` produced fewer than three labeled positives; raise `label_propensity`.",
