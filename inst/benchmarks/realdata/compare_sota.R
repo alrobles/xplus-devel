@@ -79,7 +79,11 @@ eval_fit <- function(fit, xte, zte) {
   tp <- sum(cls == 1 & zte == 1); fp <- sum(cls == 1 & zte == 0)
   fn <- sum(cls == 0 & zte == 1)
   f1 <- 2 * tp / max(1, 2 * tp + fp + fn)
-  list(auc = auc, acc = acc, f1 = f1)
+  # oracle threshold: best achievable accuracy on this test set (upper bound;
+  # diagnoses whether the gap is discrimination vs threshold calibration)
+  ts <- sort(unique(c(0, p, 1)))
+  acc_oracle <- max(vapply(ts, function(t) mean(as.integer(p >= t) == zte), numeric(1)))
+  list(auc = auc, acc = acc, f1 = f1, acc_oracle = acc_oracle)
 }
 
 published <- list(
@@ -88,42 +92,55 @@ published <- list(
   spambase = c("TEDn" = 0.894, "PvU*" = 0.892, "nnPU" = 0.885, "CVuO" = 0.881)
 )
 
+methods <- c("xplus", "elkan_noto", "naive")
 backends <- c("glmnet", "ranger", "lightgbm", "xgboost")
 nrep <- 3
+
+fit_method <- function(method, xtr, y, bk, rep) {
+  if (method == "xplus") {
+    xplus(xtr, y, backend = bk, max_iter = 15, seed = 300 + rep, nfolds = 5)
+  } else {
+    get(paste0("xplus_", method))(xtr, y, backend = bk, seed = 300 + rep, nfolds = 5)
+  }
+}
 
 out <- list()
 for (ds in list(load_spambase(), load_mushroom(), load_covtype())) {
   for (rep in seq_len(nrep)) {
     sp <- split_pu(ds$x, ds$z, seed = 100 + rep)
     y <- pu_mask(sp$ztr, label_propensity = 0.5, seed = 200 + rep)
-    for (bk in backends) {
-      t0 <- proc.time()[3]
-      fit <- tryCatch(
-        xplus(sp$xtr, y, backend = bk, max_iter = 15, seed = 300 + rep, nfolds = 5),
-        error = function(e) e
-      )
-      secs <- proc.time()[3] - t0
-      if (inherits(fit, "error")) {
-        out[[length(out) + 1]] <- data.frame(dataset = ds$name, backend = bk,
-                                             rep = rep, error = conditionMessage(fit))
-        next
+    for (method in methods) {
+      for (bk in backends) {
+        t0 <- proc.time()[3]
+        fit <- tryCatch(
+          fit_method(method, sp$xtr, y, bk, rep),
+          error = function(e) e
+        )
+        secs <- proc.time()[3] - t0
+        if (inherits(fit, "error")) {
+          out[[length(out) + 1]] <- data.frame(dataset = ds$name, method = method,
+                                               backend = bk, rep = rep,
+                                               error = conditionMessage(fit))
+          next
+        }
+        ev <- eval_fit(fit, sp$xte, sp$zte)
+        out[[length(out) + 1]] <- data.frame(
+          dataset = ds$name, method = method, backend = bk, rep = rep,
+          auc = ev$auc, acc = ev$acc, f1 = ev$f1,
+          acc_oracle = ev$acc_oracle, seconds = secs
+        )
       }
-      ev <- eval_fit(fit, sp$xte, sp$zte)
-      out[[length(out) + 1]] <- data.frame(
-        dataset = ds$name, backend = bk, rep = rep,
-        auc = ev$auc, acc = ev$acc, f1 = ev$f1, seconds = secs
-      )
     }
     cat(sprintf("[%s rep %d] done\n", ds$name, rep))
   }
 }
 
 res <- do.call(rbind, out)
-res <- res[order(res$dataset, -res$acc), ]
+res <- res[order(res$dataset, res$method, -res$acc), ]
 print(res, row.names = FALSE)
 
-agg <- aggregate(cbind(acc, auc, f1) ~ dataset + backend, res, mean)
-agg <- agg[order(agg$dataset, -agg$acc), ]
+agg <- aggregate(cbind(acc, auc, f1, acc_oracle) ~ dataset + method + backend, res, mean)
+agg <- agg[order(agg$dataset, agg$method, -agg$acc), ]
 cat("\n=== mean over reps ===\n")
 print(agg, row.names = FALSE)
 
@@ -133,8 +150,9 @@ for (nm in names(published)) {
       paste(sprintf("%s %.4f", names(published[[nm]]), published[[nm]]), collapse = ", "), "\n")
   ours <- agg[agg$dataset == nm, ]
   for (i in seq_len(nrow(ours))) {
-    cat(sprintf("   xplus-%-9s acc=%.4f auc=%.4f f1=%.4f\n",
-                ours$backend[i], ours$acc[i], ours$auc[i], ours$f1[i]))
+    cat(sprintf("   %-11s-%-9s acc=%.4f auc=%.4f f1=%.4f oracle=%.4f\n",
+                ours$method[i], ours$backend[i], ours$acc[i], ours$auc[i],
+                ours$f1[i], ours$acc_oracle[i]))
   }
 }
 

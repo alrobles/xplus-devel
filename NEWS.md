@@ -1,5 +1,11 @@
 # xplus (development version)
 
+* New PU baselines `xplus_elkan_noto()` and `xplus_naive()` expressed on the
+  same backend contract as `xplus()`, enabling honest head-to-head
+  comparisons: Elkan-Noto rescales P-vs-U probabilities by the estimated
+  labeling propensity (mean or median over labeled positives), and the
+  naive baseline treats all unlabeled instances as negatives. Both return
+  `xplus_baseline` objects with `predict` support and a `$cutoff`.
 * `pu_xplus()` registers xplus as a parsnip model (engine `"xplus"`,
   classification mode) so `fit_xy()`/`fit()`, `predict(type = "prob")`,
   `update()`, and `tune::tune_grid()`/`finetune::tune_sim_anneal()` all work

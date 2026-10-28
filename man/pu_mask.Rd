@@ -12,7 +12,9 @@ pu_mask(z, label_propensity = 0.5, seed = NULL)
 \item{label_propensity}{Constant probability that a true positive is
 observed as a labeled positive, in \verb{(0, 1]}.}
 
-\item{seed}{Optional nonnegative integer seed.}
+\item{seed}{Optional nonnegative integer seed. Use a different seed than
+the one that generated \code{z} — reusing the same stream can correlate the
+mask with the simulated labels.}
 }
 \value{
 An integer vector of PU labels (\code{1} labeled positive, \code{0}
@@ -26,7 +28,7 @@ literature builds benchmarks from open binary datasets — positives of
 the known class remain \code{1}, hidden positives and negatives pool as \code{0}.
 }
 \examples{
-z <- rbinom(200, 1, 0.4)
+z <- c(rep(1, 80), rep(0, 120))
 y <- pu_mask(z, label_propensity = 0.5, seed = 1)
 fit <- xplus(matrix(rnorm(200 * 4), ncol = 4), y, max_iter = 3)
 }

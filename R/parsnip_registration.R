@@ -158,8 +158,26 @@ update.pu_xplus <- function(object, parameters = NULL, backend = NULL,
   )
 }
 
-# Engine fit entry point: resolve the backend, fold constructor args into
-# the matching xplus_backend_*() constructor, and call xplus().
+#' Engine fit and prediction entry points for `pu_xplus`
+#'
+#' These wrappers are registered with parsnip and invoked when a
+#' `pu_xplus` spec is fitted or predicted on; they are not meant to be
+#' called directly. `xplus_parsnip_fit()` resolves the backend argument,
+#' folds extra constructor arguments into the matching
+#' `xplus_backend_*()` constructor (ignoring arguments the backend does
+#' not accept, with a warning), and calls [xplus()]. The prediction
+#' adapters return parsnip-shaped outputs: `.pred_0`/`.pred_1` columns
+#' for probabilities, `.pred` for numeric, and a `0/1` factor for class.
+#'
+#' @param x Predictor data (data frame or matrix).
+#' @param y Outcome (factor `0/1`, or coercible vector).
+#' @param new_data New predictor data for prediction.
+#' @param object The fitted `xplus` object (parsnip passes `object$fit`).
+#' @param backend,seed,max_iter,nfolds `pu_xplus` arguments, see [pu_xplus()].
+#' @param ... Backend constructor arguments forwarded from the spec.
+#'
+#' @return `xplus_parsnip_fit()` returns an [xplus()] object; prediction
+#'   helpers return tibbles or factors in parsnip shape.
 #' @keywords internal
 #' @export
 xplus_parsnip_fit <- function(x, y, backend = "glmnet", seed = NULL,
@@ -193,21 +211,20 @@ xplus_parsnip_fit <- function(x, y, backend = "glmnet", seed = NULL,
         max_iter = max_iter, nfolds = nfolds)
 }
 
-# Prediction adapters returning parsnip-shaped outputs.
-#' @keywords internal
+#' @rdname xplus_parsnip_fit
 #' @export
 xplus_parsnip_prob <- function(object, new_data) {
   p <- as.numeric(stats::predict(object, as.matrix(new_data)))
   tibble::tibble(.pred_0 = 1 - p, .pred_1 = p)
 }
 
-#' @keywords internal
+#' @rdname xplus_parsnip_fit
 #' @export
 xplus_parsnip_num <- function(object, new_data) {
   tibble::tibble(.pred = as.numeric(stats::predict(object, as.matrix(new_data))))
 }
 
-#' @keywords internal
+#' @rdname xplus_parsnip_fit
 #' @export
 xplus_parsnip_class <- function(object, new_data) {
   p <- as.numeric(stats::predict(object, as.matrix(new_data)))

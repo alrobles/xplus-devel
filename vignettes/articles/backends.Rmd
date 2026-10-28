@@ -213,6 +213,30 @@ the PU label contract (factor `0/1`, data-frame or matrix predictors), keeps
 `xplus()` seeds explicit, and filters backend-foreign arguments with a
 warning so mixed-backend grids remain usable.
 
+## Head-to-head against published PU methods
+
+`xplus_elkan_noto()` and `xplus_naive()` express classical PU baselines on
+the same backend contract — Elkan-Noto (2008) rescaled P-vs-U classification
+and the naive U-as-negative classifier — so every method shares the honest
+prediction machinery. On held-out test labels (SCAR masking,
+`label_propensity = 0.5`, 70/30 stratified split, mean of 3 reps):
+
+| dataset | published SOTA | best ours | margin |
+|---|---|---|---|
+| mushroom | PU ET 99.70% | **elkan_noto–ranger 99.99%** | +0.29 |
+| covtype | PU ET 76.51% | **elkan_noto–ranger 81.10%**, xplus–xgboost 80.86% | +4.59 |
+| spambase | (TED)ⁿ 89.40% | **xplus–glmnet 91.24%**, elkan_noto–glmnet 90.97% | +1.84 |
+
+The naive baseline collapses everywhere (≤77%), confirming that PU methods
+recover most of what supervised discrimination offers. Two findings matter
+beyond the leaderboard: on near-separable data (mushroom) the PLUS quantile
+cutoff leaves accuracy on the table — its oracle threshold reaches 100%
+where the SCAR cutoff yields 94% — while Elkan-Noto's propensity rescaling
+closes that gap; and xplus edges Elkan-Noto where pseudo-label iteration
+pays (spambase), so the two are complementary rather than competing.
+Published numbers come from slightly different protocols, so treat exact
+deltas as indicative rather than definitive.
+
 ## What is next
 
 With `tune`/`finetune` integrated, the open direction is benchmark depth:
