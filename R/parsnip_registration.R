@@ -29,10 +29,6 @@ xplus_parsnip_register <- function() {
   parsnip::set_model_engine("pu_xplus", "classification", "xplus")
   parsnip::set_dependency("pu_xplus", "xplus", "xplus", mode = "classification")
   args <- list(
-    list(parsnip = "backend", original = "backend", func = list(fun = "unknown")),
-    list(parsnip = "seed", original = "seed", func = list(fun = "unknown")),
-    list(parsnip = "max_iter", original = "max_iter", func = list(fun = "unknown")),
-    list(parsnip = "nfolds", original = "nfolds", func = list(fun = "unknown")),
     list(parsnip = "trees", original = "trees",
          func = list(pkg = "dials", fun = "trees")),
     list(parsnip = "learn_rate", original = "learn_rate",
@@ -65,7 +61,7 @@ xplus_parsnip_register <- function() {
   parsnip::set_encoding(
     model = "pu_xplus", eng = "xplus", mode = "classification",
     options = list(
-      predictor_indicators = "none", compute_intercept = FALSE,
+      predictor_indicators = "traditional", compute_intercept = FALSE,
       remove_intercept = FALSE, allow_sparse_x = TRUE
     )
   )
@@ -74,7 +70,7 @@ xplus_parsnip_register <- function() {
     type = "prob",
     value = list(
       pre = NULL, post = NULL, func = c(pkg = "xplus", fun = "xplus_parsnip_prob"),
-      args = list(object = quote(object$fit), new_data = quote(new_data))
+      args = list(object = quote(object), new_data = quote(new_data))
     )
   )
   parsnip::set_pred(
@@ -82,15 +78,7 @@ xplus_parsnip_register <- function() {
     type = "class",
     value = list(
       pre = NULL, post = NULL, func = c(pkg = "xplus", fun = "xplus_parsnip_class"),
-      args = list(object = quote(object$fit), new_data = quote(new_data))
-    )
-  )
-  parsnip::set_pred(
-    model = "pu_xplus", eng = "xplus", mode = "classification",
-    type = "numeric",
-    value = list(
-      pre = NULL, post = NULL, func = c(pkg = "xplus", fun = "xplus_parsnip_num"),
-      args = list(object = quote(object$fit), new_data = quote(new_data))
+      args = list(object = quote(object), new_data = quote(new_data))
     )
   )
   invisible(TRUE)
@@ -121,6 +109,7 @@ pu_xplus <- function(mode = "classification", engine = "xplus",
                      nfolds = 10, trees = NULL, learn_rate = NULL,
                      tree_depth = NULL, min_n = NULL, mtry = NULL,
                      sample_size = NULL, loss_reduction = NULL, ...) {
+  xplus_parsnip_register()
   args <- list(
     backend = rlang::enquo(backend), seed = rlang::enquo(seed),
     max_iter = rlang::enquo(max_iter), nfolds = rlang::enquo(nfolds),
@@ -166,8 +155,10 @@ update.pu_xplus <- function(object, parameters = NULL, backend = NULL,
 #' folds extra constructor arguments into the matching
 #' `xplus_backend_*()` constructor (ignoring arguments the backend does
 #' not accept, with a warning), and calls [xplus()]. The prediction
-#' adapters return parsnip-shaped outputs: `.pred_0`/`.pred_1` columns
-#' for probabilities, `.pred` for numeric, and a `0/1` factor for class.
+#' adapters return parsnip-shaped outputs: `.pred_<level>` columns for
+#' probabilities and a factor with the observed class levels for class
+#' predictions. The second outcome level is treated as the positive
+#' class, matching the parsnip convention for binary classification.
 #'
 #' @param x Predictor data (data frame or matrix).
 #' @param y Outcome (factor `0/1`, or coercible vector).
@@ -205,28 +196,43 @@ xplus_parsnip_fit <- function(x, y, backend = "glmnet", seed = NULL,
     backend_spec <- do.call(ctor, ctor_args[keep])
   }
   if (is.data.frame(y)) y <- y[[1]]
-  if (is.matrix(y)) y <- as.vector(y)
-  y <- if (is.factor(y)) as.integer(y) - 1L else as.integer(y)
-  xplus(as.matrix(x), y, backend = backend_spec, seed = seed,
+  if (is.factor(y)) {
+    if (nlevels(y) != 2L) stop("`pu_xplus` requires a binary outcome.", call. = FALSE)
+    y <- as.integer(y) - 1L
+  } else {
+    y <- as.integer(y)
+  }
+  xplus(.xplus_parsnip_matrix(x), y, backend = backend_spec, seed = seed,
         max_iter = max_iter, nfolds = nfolds)
 }
 
 #' @rdname xplus_parsnip_fit
 #' @export
 xplus_parsnip_prob <- function(object, new_data) {
-  p <- as.numeric(stats::predict(object, as.matrix(new_data)))
-  tibble::tibble(.pred_0 = 1 - p, .pred_1 = p)
+  lvl <- object$lvl %||% c("0", "1")
+  p <- as.numeric(stats::predict(object$fit, .xplus_parsnip_matrix(new_data)))
+  out <- tibble::tibble(1 - p, p)
+  names(out) <- paste0(".pred_", lvl[1:2])
+  out
 }
 
 #' @rdname xplus_parsnip_fit
 #' @export
 xplus_parsnip_num <- function(object, new_data) {
-  tibble::tibble(.pred = as.numeric(stats::predict(object, as.matrix(new_data))))
+  tibble::tibble(.pred = as.numeric(
+    stats::predict(object, .xplus_parsnip_matrix(new_data))))
 }
 
 #' @rdname xplus_parsnip_fit
 #' @export
 xplus_parsnip_class <- function(object, new_data) {
-  p <- as.numeric(stats::predict(object, as.matrix(new_data)))
-  factor(as.integer(p > object$cutoff), levels = c(0, 1))
+  lvl <- object$lvl %||% c("0", "1")
+  p <- as.numeric(stats::predict(object$fit, .xplus_parsnip_matrix(new_data)))
+  factor(ifelse(p > object$fit$cutoff, lvl[2], lvl[1]), levels = lvl)
+}
+
+.xplus_parsnip_matrix <- function(d) {
+  if (is.matrix(d)) return(d)
+  if (all(vapply(d, is.numeric, logical(1)))) return(as.matrix(d))
+  stats::model.matrix(~ . - 1, d)
 }

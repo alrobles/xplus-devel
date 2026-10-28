@@ -1,5 +1,14 @@
 # xplus (development version)
 
+* `pu_xplus` parsnip bridge fixes: class predictions and `.pred_*`
+  columns now carry the observed outcome levels instead of hardcoded
+  `0/1`; the second level is the positive class per parsnip convention.
+  Non-numeric predictors are expanded via `model.matrix()` (formula
+  interface now uses `predictor_indicators = "traditional"`). Controls
+  (`backend`, `seed`, `max_iter`, `nfolds`) flow as engine arguments so
+  `tune::tunable()` lists only real tuning parameters, and the dead
+  `type = "numeric"` prediction registration was removed.
+
 * New PU baselines `xplus_elkan_noto()` and `xplus_naive()` expressed on the
   same backend contract as `xplus()`, enabling honest head-to-head
   comparisons: Elkan-Noto rescales P-vs-U probabilities by the estimated
