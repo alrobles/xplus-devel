@@ -45,6 +45,6 @@ Suggests:
     yardstick
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-URL: https://alrobles.github.io/xplus/, https://github.com/alrobles/xplus-devel
+URL: https://alrobles.github.io/xplus-devel/, https://github.com/alrobles/xplus-devel
 BugReports: https://github.com/alrobles/xplus-devel/issues
 Config/roxygen2/version: 8.1.0
