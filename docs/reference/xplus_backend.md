@@ -23,7 +23,9 @@ xplus_backend(
   label = name,
   uses_cv = FALSE,
   parameters = NULL,
-  fit_predict = NULL
+  fit_predict = NULL,
+  supports_fractional = TRUE,
+  supports_weights = TRUE
 )
 ```
 
@@ -83,6 +85,21 @@ xplus_backend(
   appropriate for learners that do not memorize per-observation targets.
   Iterative pseudo-label fits always use `predict`, which keeps
   self-training dynamics uniform across backends.
+
+- supports_fractional:
+
+  Logical scalar; whether `fit` handles fractional targets in `[0, 1]`
+  (the final pseudo-label fit). When `FALSE`,
+  [`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md) fails
+  with a clear error if the final targets are non-binary instead of
+  surfacing an engine-specific error deep in the learner.
+
+- supports_weights:
+
+  Logical scalar; whether `fit` honors case weights. When `FALSE`,
+  [`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md) warns
+  once that `sampling = "bootstrap"` multiplicities will be silently
+  ignored by this learner.
 
 ## Value
 

@@ -33,6 +33,13 @@
   engine seeds are injected for reproducibility, and `fit_predict`
   reuses ranger out-of-bag scores when the engine stores them.
   `parsnip`, `hardhat`, and `rlang` move to `Suggests`.
+- Backend capability flags `supports_fractional` and `supports_weights`
+  on
+  [`xplus_backend()`](https://alrobles.github.io/xplus/reference/xplus_backend.md):
+  fractional-incompatible learners fail with a clear error when the
+  final pseudo-label targets are soft, and weight-ignoring learners warn
+  once under `sampling = "bootstrap"`. Both default to `TRUE`,
+  preserving the existing contract.
 - New
   [`get_importance()`](https://alrobles.github.io/xplus/reference/get_importance.md)
   returning backend feature scores (elastic-net coefficients for glmnet,

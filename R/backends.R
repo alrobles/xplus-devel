@@ -35,6 +35,13 @@
 #'   on training rows, appropriate for learners that do not memorize
 #'   per-observation targets. Iterative pseudo-label fits always use
 #'   `predict`, which keeps self-training dynamics uniform across backends.
+#' @param supports_fractional Logical scalar; whether `fit` handles fractional
+#'   targets in `[0, 1]` (the final pseudo-label fit). When `FALSE`, `xplus()`
+#'   fails with a clear error if the final targets are non-binary instead of
+#'   surfacing an engine-specific error deep in the learner.
+#' @param supports_weights Logical scalar; whether `fit` honors case weights.
+#'   When `FALSE`, `xplus()` warns once that `sampling = "bootstrap"`
+#'   multiplicities will be silently ignored by this learner.
 #' @details The contract mirrors the minimal estimator interface shared by
 #'   caret `modelInfo` entries, sklearn `fit`/`predict_proba` estimators
 #'   (the basis of PU wrappers such as `ElkanotoPuClassifier`), and mlr3
@@ -56,7 +63,8 @@
 #'   backend = constant, max_iter = 3)
 #' @export
 xplus_backend <- function(name, fit, predict, importance = NULL, label = name,
-                          uses_cv = FALSE, parameters = NULL, fit_predict = NULL) {
+                          uses_cv = FALSE, parameters = NULL, fit_predict = NULL,
+                          supports_fractional = TRUE, supports_weights = TRUE) {
   if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(trimws(name))) {
     stop("`name` must be a nonempty character scalar.", call. = FALSE)
   }
@@ -87,10 +95,20 @@ xplus_backend <- function(name, fit, predict, importance = NULL, label = name,
            call. = FALSE)
     }
   }
+  if (!is.logical(supports_fractional) || length(supports_fractional) != 1L ||
+      is.na(supports_fractional)) {
+    stop("`supports_fractional` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!is.logical(supports_weights) || length(supports_weights) != 1L ||
+      is.na(supports_weights)) {
+    stop("`supports_weights` must be TRUE or FALSE.", call. = FALSE)
+  }
   structure(
     list(name = name, label = label, fit = fit, predict = predict,
          importance = importance, uses_cv = uses_cv,
-         parameters = parameters, fit_predict = fit_predict),
+         parameters = parameters, fit_predict = fit_predict,
+         supports_fractional = supports_fractional,
+         supports_weights = supports_weights),
     class = "xplus_backend"
   )
 }
@@ -109,6 +127,8 @@ print.xplus_backend <- function(x, ...) {
   cat("Internal cross-validation:", x$uses_cv, "\n")
   cat("Feature importance:", !is.null(x$importance), "\n")
   cat("Honest training predictions:", !is.null(x$fit_predict), "\n")
+  cat("Fractional targets:", isTRUE(x$supports_fractional), "\n")
+  cat("Case weights:", isTRUE(x$supports_weights), "\n")
   if (!is.null(x$parameters) && nrow(x$parameters)) {
     cat("Tunable parameters:", paste(x$parameters$parameter, collapse = ", "), "\n")
   }
@@ -571,6 +591,9 @@ xplus_backend_gam <- function(k = NULL, method = "REML", max_features = 100) {
 #'   such as [parsnip::rand_forest()], [parsnip::boost_tree()] or
 #'   [parsnip::logistic_reg()], usually piped through [parsnip::set_engine()].
 #'   The engine must be set and its package installed.
+#' @param supports_fractional Logical scalar; declare `FALSE` for specs whose
+#'   model lacks a regression mode (e.g. `logistic_reg`) so `xplus()` fails
+#'   early with a clear message instead of at the fractional final fit.
 #'
 #' @return An `"xplus_backend"` object named `parsnip:<engine>`.
 #' @seealso [xplus_backend()], [xplus()], [xplus_backend_ranger()]
@@ -582,7 +605,7 @@ xplus_backend_gam <- function(k = NULL, method = "REML", max_features = 100) {
 #' fit <- xplus(x, y, backend = backend)
 #' }
 #' @export
-xplus_backend_parsnip <- function(spec) {
+xplus_backend_parsnip <- function(spec, supports_fractional = TRUE) {
   if (!inherits(spec, "model_spec")) {
     stop("`spec` must be a parsnip model specification (class `model_spec`).",
          call. = FALSE)
@@ -596,6 +619,7 @@ xplus_backend_parsnip <- function(spec) {
     name = paste0("parsnip:", engine),
     label = sprintf("parsnip %s spec (engine '%s')", class(spec)[1], engine),
     uses_cv = FALSE,
+    supports_fractional = supports_fractional,
     fit = function(x, y, foldid, weights) {
       if (!requireNamespace("parsnip", quietly = TRUE)) {
         stop("The parsnip backend requires the parsnip package to be installed.",

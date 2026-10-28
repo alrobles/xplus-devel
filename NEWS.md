@@ -19,6 +19,11 @@
   injected for reproducibility, and `fit_predict` reuses ranger out-of-bag
   scores when the engine stores them. `parsnip`, `hardhat`, and `rlang`
   move to `Suggests`.
+* Backend capability flags `supports_fractional` and `supports_weights` on
+  `xplus_backend()`: fractional-incompatible learners fail with a clear
+  error when the final pseudo-label targets are soft, and weight-ignoring
+  learners warn once under `sampling = "bootstrap"`. Both default to
+  `TRUE`, preserving the existing contract.
 * New `get_importance()` returning backend feature scores (elastic-net
   coefficients for glmnet, variable importance for ranger, smooth-term
   significance for gam). `coef()` remains glmnet-only.

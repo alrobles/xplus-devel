@@ -12,7 +12,9 @@ xplus_backend(
   label = name,
   uses_cv = FALSE,
   parameters = NULL,
-  fit_predict = NULL
+  fit_predict = NULL,
+  supports_fractional = TRUE,
+  supports_weights = TRUE
 )
 }
 \arguments{
@@ -52,6 +54,15 @@ fall back to \code{predict} on those rows. When \code{NULL}, \code{predict} is r
 on training rows, appropriate for learners that do not memorize
 per-observation targets. Iterative pseudo-label fits always use
 \code{predict}, which keeps self-training dynamics uniform across backends.}
+
+\item{supports_fractional}{Logical scalar; whether \code{fit} handles fractional
+targets in \verb{[0, 1]} (the final pseudo-label fit). When \code{FALSE}, \code{xplus()}
+fails with a clear error if the final targets are non-binary instead of
+surfacing an engine-specific error deep in the learner.}
+
+\item{supports_weights}{Logical scalar; whether \code{fit} honors case weights.
+When \code{FALSE}, \code{xplus()} warns once that \code{sampling = "bootstrap"}
+multiplicities will be silently ignored by this learner.}
 }
 \value{
 An object of class \code{"xplus_backend"} accepted by the \code{backend}

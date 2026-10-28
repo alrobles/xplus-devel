@@ -72,6 +72,10 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   sampling <- match.arg(sampling)
   cv_measure <- match.arg(cv_measure)
   backend <- .xplus_resolve_backend(backend, alpha, cv_measure)
+  if (sampling == "bootstrap" && !isTRUE(backend$supports_weights)) {
+    warning(sprintf("Backend '%s' declares `supports_weights = FALSE`; bootstrap multiplicities are passed but will be silently ignored by this learner.",
+                    backend$name), call. = FALSE)
+  }
   n <- nrow(x)
   original_y <- y
   positive_id <- which(y == 1L)
@@ -175,6 +179,10 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   targets <- .xplus_final_targets(pseudo_labels, original_y, final_foldid)
   if (targets$fallback_used) warning(paste("Final fit reverted to original labels:", targets$reason), call. = FALSE)
   final_labels <- targets$labels
+  if (!all(final_labels %in% c(0, 1)) && !isTRUE(backend$supports_fractional)) {
+    stop(sprintf("Backend '%s' declares `supports_fractional = FALSE` but the final pseudo-label targets are fractional; choose a learner that handles regression targets.",
+                 backend$name), call. = FALSE)
+  }
   final_step <- .xplus_backend_fit(backend, x, final_labels, final_foldid, rep(1, n))
   fit_pi <- final_step$model
   # Stored predictions and the cutoff use honest (e.g. out-of-bag) scores

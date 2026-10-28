@@ -22,7 +22,7 @@ resampling.
 ## Usage
 
 ``` r
-xplus_backend_parsnip(spec)
+xplus_backend_parsnip(spec, supports_fractional = TRUE)
 ```
 
 ## Arguments
@@ -37,6 +37,13 @@ xplus_backend_parsnip(spec)
   usually piped through
   [`parsnip::set_engine()`](https://parsnip.tidymodels.org/reference/set_engine.html).
   The engine must be set and its package installed.
+
+- supports_fractional:
+
+  Logical scalar; declare `FALSE` for specs whose model lacks a
+  regression mode (e.g. `logistic_reg`) so
+  [`xplus()`](https://alrobles.github.io/xplus/reference/xplus.md) fails
+  early with a clear message instead of at the fractional final fit.
 
 ## Value
 

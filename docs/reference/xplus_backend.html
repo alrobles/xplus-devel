@@ -64,7 +64,9 @@ custom learners with the same contract.</p>
 <span>  label <span class="op">=</span> <span class="va">name</span>,</span>
 <span>  uses_cv <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  fit_predict <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  fit_predict <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  supports_fractional <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  supports_weights <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -123,6 +125,19 @@ fall back to <code>predict</code> on those rows. When <code>NULL</code>, <code>p
 on training rows, appropriate for learners that do not memorize
 per-observation targets. Iterative pseudo-label fits always use
 <code>predict</code>, which keeps self-training dynamics uniform across backends.</p></dd>
+
+
+<dt id="arg-supports-fractional">supports_fractional<a class="anchor" aria-label="anchor" href="#arg-supports-fractional"></a></dt>
+<dd><p>Logical scalar; whether <code>fit</code> handles fractional
+targets in <code>[0, 1]</code> (the final pseudo-label fit). When <code>FALSE</code>, <code><a href="xplus.html">xplus()</a></code>
+fails with a clear error if the final targets are non-binary instead of
+surfacing an engine-specific error deep in the learner.</p></dd>
+
+
+<dt id="arg-supports-weights">supports_weights<a class="anchor" aria-label="anchor" href="#arg-supports-weights"></a></dt>
+<dd><p>Logical scalar; whether <code>fit</code> honors case weights.
+When <code>FALSE</code>, <code><a href="xplus.html">xplus()</a></code> warns once that <code>sampling = "bootstrap"</code>
+multiplicities will be silently ignored by this learner.</p></dd>
 
 </dl></div>
     <div class="section level2">

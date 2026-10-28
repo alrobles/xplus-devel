@@ -321,6 +321,43 @@ test_that("parsnip backend predictions are reproducible under xplus(seed)", {
   expect_identical(as.numeric(a$pred_y), as.numeric(b$pred_y))
 })
 
+test_that("capability flags validate and gate the final fit", {
+  skip_if_not_installed("glmnet")
+  fit_fun <- function(x, y, foldid, weights) stats::weighted.mean(y, weights)
+  predict_fun <- function(model, newx) rep(model, nrow(newx))
+  expect_error(xplus_backend("b", fit_fun, predict_fun,
+                             supports_fractional = NA), "supports_fractional")
+  expect_error(xplus_backend("b", fit_fun, predict_fun,
+                             supports_weights = "yes"), "supports_weights")
+
+  set.seed(5)
+  x <- matrix(rnorm(80 * 4), ncol = 4)
+  y <- c(rep(1, 20), rep(0, 60))
+  binary_only <- xplus_backend("binary-only", fit_fun, predict_fun,
+                               supports_fractional = FALSE)
+  expect_output(print(binary_only), "Fractional targets: FALSE")
+  # Soft final pseudo-labels make every final target fractional.
+  expect_error(xplus(x, y, backend = binary_only, max_iter = 2),
+               "supports_fractional")
+})
+
+test_that("supports_weights warns under bootstrap sampling", {
+  skip_if_not_installed("glmnet")
+  set.seed(6)
+  x <- matrix(rnorm(80 * 4), ncol = 4)
+  y <- c(rep(1, 20), rep(0, 60))
+  unweighted <- xplus_backend(
+    "unweighted",
+    fit = function(x, y, foldid, weights) stats::weighted.mean(y, weights),
+    predict = function(model, newx) rep(model, nrow(newx)),
+    supports_weights = FALSE
+  )
+  expect_warning(xplus(x, y, backend = unweighted, max_iter = 2),
+                 "supports_weights")
+  expect_silent(xplus(x, y, backend = unweighted, max_iter = 2,
+                      sampling = "unique"))
+})
+
 test_that("classification-only parsnip specs fail clearly on the final fit", {
   skip_if_not_installed("parsnip")
   sim <- simulate_pu_data(n = 150, p = 4, seed = 41, label_propensity = 0.7)

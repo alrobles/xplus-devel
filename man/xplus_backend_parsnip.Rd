@@ -4,13 +4,17 @@
 \alias{xplus_backend_parsnip}
 \title{Parsnip model-spec backend for xplus}
 \usage{
-xplus_backend_parsnip(spec)
+xplus_backend_parsnip(spec, supports_fractional = TRUE)
 }
 \arguments{
 \item{spec}{A \code{parsnip} model specification produced by a model function
 such as \code{\link[parsnip:rand_forest]{parsnip::rand_forest()}}, \code{\link[parsnip:boost_tree]{parsnip::boost_tree()}} or
 \code{\link[parsnip:logistic_reg]{parsnip::logistic_reg()}}, usually piped through \code{\link[parsnip:set_engine]{parsnip::set_engine()}}.
 The engine must be set and its package installed.}
+
+\item{supports_fractional}{Logical scalar; declare \code{FALSE} for specs whose
+model lacks a regression mode (e.g. \code{logistic_reg}) so \code{xplus()} fails
+early with a clear message instead of at the fractional final fit.}
 }
 \value{
 An \code{"xplus_backend"} object named \verb{parsnip:<engine>}.

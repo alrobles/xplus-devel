@@ -68,7 +68,7 @@ parsnip specs carry no internal resampling.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">xplus_backend_parsnip</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">xplus_backend_parsnip</span><span class="op">(</span><span class="va">spec</span>, supports_fractional <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -80,6 +80,12 @@ parsnip specs carry no internal resampling.</p>
 such as <code><a href="https://parsnip.tidymodels.org/reference/rand_forest.html" class="external-link">parsnip::rand_forest()</a></code>, <code><a href="https://parsnip.tidymodels.org/reference/boost_tree.html" class="external-link">parsnip::boost_tree()</a></code> or
 <code><a href="https://parsnip.tidymodels.org/reference/logistic_reg.html" class="external-link">parsnip::logistic_reg()</a></code>, usually piped through <code><a href="https://parsnip.tidymodels.org/reference/set_engine.html" class="external-link">parsnip::set_engine()</a></code>.
 The engine must be set and its package installed.</p></dd>
+
+
+<dt id="arg-supports-fractional">supports_fractional<a class="anchor" aria-label="anchor" href="#arg-supports-fractional"></a></dt>
+<dd><p>Logical scalar; declare <code>FALSE</code> for specs whose
+model lacks a regression mode (e.g. <code>logistic_reg</code>) so <code><a href="xplus.html">xplus()</a></code> fails
+early with a clear message instead of at the fractional final fit.</p></dd>
 
 </dl></div>
     <div class="section level2">
