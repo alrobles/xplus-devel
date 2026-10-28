@@ -1,5 +1,13 @@
 # xplus (development version)
 
+* `pu_auc()` / `pu_auc_vec()`: a proper yardstick `prob_metric`
+  (direction `maximize`) computing the labeled-vs-unlabeled AUC, so
+  `metric_set(pu_auc)` works directly in `tune_grid()` and
+  `finetune::tune_sim_anneal()`. `event_level` defaults to `"second"`,
+  matching the parsnip positive-class convention. `workflow_set()` with
+  one workflow per backend is now the documented idiom for ranking
+  learners without negatives.
+
 * `pu_xplus` parsnip bridge fixes: class predictions and `.pred_*`
   columns now carry the observed outcome levels instead of hardcoded
   `0/1`; the second level is the positive class per parsnip convention.

@@ -47,7 +47,9 @@ called directly. \code{xplus_parsnip_fit()} resolves the backend argument,
 folds extra constructor arguments into the matching
 \verb{xplus_backend_*()} constructor (ignoring arguments the backend does
 not accept, with a warning), and calls \code{\link[=xplus]{xplus()}}. The prediction
-adapters return parsnip-shaped outputs: \code{.pred_0}/\code{.pred_1} columns
-for probabilities, \code{.pred} for numeric, and a \code{0/1} factor for class.
+adapters return parsnip-shaped outputs: \verb{.pred_<level>} columns for
+probabilities and a factor with the observed class levels for class
+predictions. The second outcome level is treated as the positive
+class, matching the parsnip convention for binary classification.
 }
 \keyword{internal}

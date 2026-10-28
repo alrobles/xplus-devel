@@ -42,6 +42,7 @@ Suggests:
     testthat (>= 3.0.0),
     tune,
     workflows,
+    workflowsets,
     xgboost,
     yardstick
 VignetteBuilder: knitr

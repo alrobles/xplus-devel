@@ -200,18 +200,48 @@ library(workflows); library(rsample); library(yardstick)
 wf <- workflow(y ~ ., spec = pu_xplus(backend = "ranger", seed = 42,
                                       trees = tune(), mtry = tune()))
 tune_grid(wf, resamples = vfold_cv(d, v = 5, strata = y),
-          grid = 10, metrics = metric_set(roc_auc))
+          grid = 10, metrics = metric_set(pu_auc))
 
 tune_sim_anneal(wf, resamples = vfold_cv(d, v = 5, strata = y),
                 param_info = parameters(trees(c(50, 500)),
                                         finalize(mtry(c(1, 10)), d)),
-                iter = 20, metrics = metric_set(roc_auc))
+                iter = 20, metrics = metric_set(pu_auc))
+```
+
+`pu_auc` is a proper yardstick probability metric shipping with xplus —
+identical to `roc_auc` computed on the observed labels, but named for what
+it actually measures (the labeled class is the *second* level under the
+parsnip convention, hence `event_level = "second"` by default).
+
+To compare *learners* rather than hyperparameters of a fixed learner, the
+canonical tidymodels idiom is `workflow_set`: one workflow per backend,
+ranked by the PU-valid metric — no need to tune over the categorical
+`backend` argument:
+
+```r
+library(workflowsets)
+
+wfs <- workflow_set(
+  preproc = list(base = y ~ .),
+  models = list(
+    glmnet = pu_xplus(backend = "glmnet", seed = 42),
+    ranger = pu_xplus(backend = "ranger", seed = 42, trees = tune()),
+    xgboost = pu_xplus(backend = "xgboost", seed = 42, trees = tune())
+  )
+)
+workflow_map(wfs, "tune_grid",
+             resamples = vfold_cv(d, v = 5, strata = y),
+             grid = 10, metrics = metric_set(pu_auc)) |>
+  rank_results(rank_metric = "pu_auc")
 ```
 
 Registration is automatic when parsnip is installed; the wrapper enforces
-the PU label contract (factor `0/1`, data-frame or matrix predictors), keeps
+the PU label contract (the second outcome level is the positive class,
+non-numeric predictors are expanded via `model.matrix()`), keeps
 `xplus()` seeds explicit, and filters backend-foreign arguments with a
-warning so mixed-backend grids remain usable.
+warning — so tuning `trees` against `backend = "glmnet"` warns and
+continues rather than failing, but conditional grids should still pair
+each backend with only the parameters it accepts.
 
 ## Head-to-head against published PU methods
 
