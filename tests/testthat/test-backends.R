@@ -368,3 +368,34 @@ test_that("classification-only parsnip specs fail clearly on the final fit", {
   expect_error(xplus(sim$x, sim$y, backend = backend, max_iter = 2),
                "regression")
 })
+
+test_that("pu_score ranks learners without negative labels", {
+  skip_if_not_installed("ranger")
+  sim <- simulate_pu_data(n = 300, p = 6, boundary = "nonlinear", seed = 51,
+                          prevalence = 0.4, label_propensity = 0.5)
+  fit_g <- xplus(sim$x, sim$y, backend = "glmnet", max_iter = 5, seed = 51)
+  fit_r <- xplus(sim$x, sim$y, backend = "ranger", max_iter = 5, seed = 51)
+  expect_true(pu_score(fit_r) > pu_score(fit_g))
+  expect_true(is.finite(pu_score(fit_r, "stability")))
+  expect_true(is.finite(pu_score(fit_r, "pseudo_auc")))
+})
+
+test_that("xplus_grid compares names, specs and constructor grids", {
+  skip_if_not_installed("glmnet")
+  sim <- simulate_pu_data(n = 200, p = 4, seed = 53, label_propensity = 0.7)
+  lb <- xplus_grid(sim$x, sim$y, c("glmnet", "ranger"), max_iter = 3, seed = 53)
+  expect_true(is.data.frame(lb) && nrow(lb) == 2)
+  expect_true(all(c("learner", "score", "n_iter", "stop_reason", "error") %in% names(lb)))
+  expect_true(all(is.na(lb$error)))
+
+  grid <- data.frame(alpha = c(0.5, 1))
+  lg <- xplus_grid(sim$x, sim$y, xplus_backend_glmnet, params = grid,
+                   max_iter = 3, seed = 53)
+  expect_equal(sort(lg$alpha), c(0.5, 1))
+
+  broken <- xplus_backend("broken",
+    fit = function(x, y, foldid, weights) stop("boom"),
+    predict = function(model, newx) rep(0.5, nrow(newx)))
+  lf <- xplus_grid(sim$x, sim$y, list(broken, "glmnet"), max_iter = 3, seed = 53)
+  expect_true(any(!is.na(lf$error)))
+})

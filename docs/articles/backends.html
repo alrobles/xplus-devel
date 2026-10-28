@@ -396,6 +396,26 @@ F1 of 0.76–0.80 with the same stored cutoff, which the memorized
 in-sample calibration could not.</p>
 </div>
 <div class="section level2">
+<h2 id="model-selection-without-negatives">Model selection without negatives<a class="anchor" aria-label="anchor" href="#model-selection-without-negatives"></a>
+</h2>
+<p><code><a href="../reference/xplus_grid.html">xplus_grid()</a></code> fits every candidate on shared bootstrap
+seeds and ranks them by <code><a href="../reference/pu_score.html">pu_score()</a></code> — the
+positive-vs-unlabeled AUC of the honest stored predictions, which orders
+learners consistently under SCAR labeling:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/xplus_grid.html">xplus_grid</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"glmnet"</span>, <span class="st">"ranger"</span>, <span class="st">"lightgbm"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/xplus_grid.html">xplus_grid</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, <span class="va">xplus_backend_xgboost</span>,</span>
+<span>           params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>trees <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">300</span><span class="op">)</span>, learn_rate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.15</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>On the <code>lacsSample</code> dataset (600 curated PU text documents
+reduced to a 300-term TF-IDF matrix, 153 positives vs 447 unlabeled) the
+PU ranking recovers the expected text-model ordering — glmnet 0.999 &gt;
+ranger 0.966 &gt; lightgbm 0.958 &gt; xgboost 0.938 — and ranks xgboost
+hyperparameter settings correctly (300 trees at <code>learn_rate</code>
+0.05 beat the smaller, faster settings). Linear learners win on sparse
+text; forests win on curved boundaries. The leaderboard makes that
+choice an empirical one.</p>
+</div>
+<div class="section level2">
 <h2 id="what-is-next">What is next<a class="anchor" aria-label="anchor" href="#what-is-next"></a>
 </h2>
 <p>The <code>parameters</code> field already declares tunable

@@ -40,6 +40,8 @@
   : Print method for xplus_backend objects
 - [`print(`*`<xplus_pu_data>`*`)`](https://alrobles.github.io/xplus/reference/print.xplus_pu_data.md)
   : Print method for xplus_pu_data objects
+- [`pu_score()`](https://alrobles.github.io/xplus/reference/pu_score.md)
+  : PU-valid score for a fitted xplus object
 - [`simulate_pu_data()`](https://alrobles.github.io/xplus/reference/simulate_pu_data.md)
   : Simulate a positive-unlabeled dataset
 - [`summary(`*`<xplus>`*`)`](https://alrobles.github.io/xplus/reference/summary.xplus.md)
@@ -60,5 +62,7 @@
   : Ranger random-forest backend for xplus
 - [`xplus_backend_xgboost()`](https://alrobles.github.io/xplus/reference/xplus_backend_xgboost.md)
   : XGBoost gradient-boosting backend for xplus
+- [`xplus_grid()`](https://alrobles.github.io/xplus/reference/xplus_grid.md)
+  : Compare learners or hyperparameter grids on PU data
 - [`xplus_object_example`](https://alrobles.github.io/xplus/reference/xplus_object_example.md)
   : Example xplus object

@@ -24,6 +24,12 @@
   error when the final pseudo-label targets are soft, and weight-ignoring
   learners warn once under `sampling = "bootstrap"`. Both default to
   `TRUE`, preserving the existing contract.
+* New `pu_score()` and `xplus_grid()` for learner selection without
+  negative labels: the PU-valid score is the positive-vs-unlabeled AUC of
+  the honest stored predictions, which ranks learners consistently under
+  SCAR. `xplus_grid()` compares backend names/specs or evaluates a
+  constructor over a `params` data-frame grid on shared seeds, returning a
+  ranked leaderboard with per-candidate errors captured.
 * New `get_importance()` returning backend feature scores (elastic-net
   coefficients for glmnet, variable importance for ranger, smooth-term
   significance for gam). `coef()` remains glmnet-only.

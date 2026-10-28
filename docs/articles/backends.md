@@ -128,6 +128,24 @@ The honest cutoff transfers to held-out data: ranger reaches test-set F1
 of 0.76–0.80 with the same stored cutoff, which the memorized in-sample
 calibration could not.
 
+## Model selection without negatives
+
+[`xplus_grid()`](https://alrobles.github.io/xplus/reference/xplus_grid.md)
+fits every candidate on shared bootstrap seeds and ranks them by
+[`pu_score()`](https://alrobles.github.io/xplus/reference/pu_score.md) —
+the positive-vs-unlabeled AUC of the honest stored predictions, which
+orders learners consistently under SCAR labeling:
+
+[`xplus_grid`](https://alrobles.github.io/xplus/reference/xplus_grid.md)`(``x``, ``y``, `[`c`](https://rdrr.io/r/base/c.html)`(``"glmnet"``, ``"ranger"``, ``"lightgbm"``)``)`` `[`xplus_grid`](https://alrobles.github.io/xplus/reference/xplus_grid.md)`(``x``, ``y``, ``xplus_backend_xgboost``,`` `` params ``=`` `[`expand.grid`](https://rdrr.io/r/base/expand.grid.html)`(``trees ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``100``, ``300``)``, learn_rate ``=`` `[`c`](https://rdrr.io/r/base/c.html)`(``0.05``, ``0.15``)``)``)`
+
+On the `lacsSample` dataset (600 curated PU text documents reduced to a
+300-term TF-IDF matrix, 153 positives vs 447 unlabeled) the PU ranking
+recovers the expected text-model ordering — glmnet 0.999 \> ranger 0.966
+\> lightgbm 0.958 \> xgboost 0.938 — and ranks xgboost hyperparameter
+settings correctly (300 trees at `learn_rate` 0.05 beat the smaller,
+faster settings). Linear learners win on sparse text; forests win on
+curved boundaries. The leaderboard makes that choice an empirical one.
+
 ## What is next
 
 The `parameters` field already declares tunable hyperparameters in caret

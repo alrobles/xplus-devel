@@ -41,6 +41,17 @@
   once under `sampling = "bootstrap"`. Both default to `TRUE`,
   preserving the existing contract.
 - New
+  [`pu_score()`](https://alrobles.github.io/xplus/reference/pu_score.md)
+  and
+  [`xplus_grid()`](https://alrobles.github.io/xplus/reference/xplus_grid.md)
+  for learner selection without negative labels: the PU-valid score is
+  the positive-vs-unlabeled AUC of the honest stored predictions, which
+  ranks learners consistently under SCAR.
+  [`xplus_grid()`](https://alrobles.github.io/xplus/reference/xplus_grid.md)
+  compares backend names/specs or evaluates a constructor over a
+  `params` data-frame grid on shared seeds, returning a ranked
+  leaderboard with per-candidate errors captured.
+- New
   [`get_importance()`](https://alrobles.github.io/xplus/reference/get_importance.md)
   returning backend feature scores (elastic-net coefficients for glmnet,
   variable importance for ranger, smooth-term significance for gam).
