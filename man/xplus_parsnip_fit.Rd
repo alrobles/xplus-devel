@@ -14,6 +14,7 @@ xplus_parsnip_fit(
   seed = NULL,
   max_iter = 100,
   nfolds = 10,
+  cutoff_method = "quantile",
   ...
 )
 

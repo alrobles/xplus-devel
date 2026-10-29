@@ -23,7 +23,8 @@ xplus(
   sampling = c("bootstrap", "unique"),
   cv_measure = c("deviance", "auc"),
   degenerate_threshold = 1e-06,
-  backend = "glmnet"
+  backend = "glmnet",
+  cutoff_method = c("quantile", "elkan_noto")
 )
 }
 \arguments{
@@ -74,6 +75,13 @@ and is recorded with the actual fitting targets and the iteration history.}
 \code{"ranger"}, \code{"gam"}, \code{"xgboost"}, \code{"lightgbm"}, or an \code{\link[=xplus_backend]{xplus_backend()}}
 object for custom backends.
 \code{alpha} and \code{cv_measure} only configure the \code{"glmnet"} backend.}
+
+\item{cutoff_method}{Rule for the stored positive-class cutoff:
+\code{"quantile"} (default, the \code{qq} quantile of honest predictions on
+labeled positives, the original PLUS rule) or \code{"elkan_noto"} (half
+the mean labeled-positive score — the 0.5 posterior boundary of the
+Elkan-Noto P-vs-U rescaling, typically better on well-separated
+data where the quantile cutoff becomes unreachable).}
 }
 \value{
 An object of class \code{"xplus"} containing predictions, original and final labels, pseudo-labels, fallback metadata, sampling counts, and history.

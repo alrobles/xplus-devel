@@ -172,7 +172,8 @@ update.pu_xplus <- function(object, parameters = NULL, backend = NULL,
 #' @keywords internal
 #' @export
 xplus_parsnip_fit <- function(x, y, backend = "glmnet", seed = NULL,
-                               max_iter = 100, nfolds = 10, ...) {
+                               max_iter = 100, nfolds = 10,
+                               cutoff_method = "quantile", ...) {
   ctors <- c(
     glmnet = "xplus_backend_glmnet", ranger = "xplus_backend_ranger",
     gam = "xplus_backend_gam", xgboost = "xplus_backend_xgboost",
@@ -203,7 +204,7 @@ xplus_parsnip_fit <- function(x, y, backend = "glmnet", seed = NULL,
     y <- as.integer(y)
   }
   xplus(.xplus_parsnip_matrix(x), y, backend = backend_spec, seed = seed,
-        max_iter = max_iter, nfolds = nfolds)
+        max_iter = max_iter, nfolds = nfolds, cutoff_method = cutoff_method)
 }
 
 #' @rdname xplus_parsnip_fit

@@ -243,6 +243,37 @@ warning — so tuning `trees` against `backend = "glmnet"` warns and
 continues rather than failing, but conditional grids should still pair
 each backend with only the parameters it accepts.
 
+### Cutoff calibration
+
+Discrimination and thresholding are separate problems — on near-separable
+data the learned scores can rank perfectly while the stored cutoff still
+loses accuracy. `xplus()` offers two cutoff rules via `cutoff_method`:
+
+- `"quantile"` (default): the `qq` quantile of honest positive scores —
+  the original PLUS rule.
+- `"elkan_noto"`: half the mean labeled-positive score, i.e. the 0.5
+  boundary of the Elkan–Noto posterior rescaling. On well-separated data
+  this is the safer choice.
+
+In tidymodels, threshold tuning is a *post-processing* step: attach a
+`tailor()` postprocessor to the workflow and tune the threshold against a
+class metric. Mind the PU caveat — metrics computed on observed labels
+treat unlabeled as negative, so they favor lower thresholds than the true
+posterior boundary:
+
+```r
+library(tailor)
+wf <- workflow() |>
+  add_formula(y ~ .) |>
+  add_model(pu_xplus(backend = "ranger", seed = 42)) |>
+  add_tailor(tailor() |>
+               adjust_probability_threshold(threshold = tune()))
+
+tune_grid(wf, resamples = vfold_cv(d, v = 5, strata = y),
+          grid = tibble(threshold = seq(0.1, 0.9, 0.1)),
+          metrics = metric_set(f_meas))
+```
+
 ## Head-to-head against published PU methods
 
 `xplus_elkan_noto()` and `xplus_naive()` express classical PU baselines on

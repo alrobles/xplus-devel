@@ -11,6 +11,12 @@
 #' @param learning_rate Pseudo-label smoothing rate in `(0, 1]`; values below one
 #'   retain the package's global-update, hard-thresholded enhancement path.
 #' @param qq Quantile used to define the positive-reference cutoff.
+#' @param cutoff_method Rule for the stored positive-class cutoff:
+#'   `"quantile"` (default, the `qq` quantile of honest predictions on
+#'   labeled positives, the original PLUS rule) or `"elkan_noto"` (half
+#'   the mean labeled-positive score — the 0.5 posterior boundary of the
+#'   Elkan-Noto P-vs-U rescaling, typically better on well-separated
+#'   data where the quantile cutoff becomes unreachable).
 #' @param verbose Logical; print iterative progress messages.
 #' @param nfolds Requested CV folds, an integer at least three; reduced for small classes.
 #' @param max_iter Maximum number of pseudo-labeling iterations.
@@ -52,7 +58,8 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
                   convergence_threshold = 0.9, seed = NULL, sigmoid_scale = 10,
                   min_iter = 5, stability_window = 5, min_coverage = 0.9,
                   sampling = c("bootstrap", "unique"), cv_measure = c("deviance", "auc"),
-                  degenerate_threshold = 1e-6, backend = "glmnet") {
+                  degenerate_threshold = 1e-6, backend = "glmnet",
+                  cutoff_method = c("quantile", "elkan_noto")) {
   this.call <- match.call()
   x <- .xplus_matrix(x)
   y <- .xplus_binary_labels(y, nrow(x), require_both = TRUE)
@@ -71,6 +78,7 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   if (!is.logical(verbose) || length(verbose) != 1L || is.na(verbose)) stop("`verbose` must be TRUE or FALSE.", call. = FALSE)
   sampling <- match.arg(sampling)
   cv_measure <- match.arg(cv_measure)
+  cutoff_method <- match.arg(cutoff_method)
   backend <- .xplus_resolve_backend(backend, alpha, cv_measure)
   if (sampling == "bootstrap" && !isTRUE(backend$supports_weights)) {
     warning(sprintf("Backend '%s' declares `supports_weights = FALSE`; bootstrap multiplicities are passed but will be silently ignored by this learner.",
@@ -186,7 +194,13 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
   # where the backend provides them; in-sample memorized probabilities would
   # push the positive quantile cutoff above any reachable score.
   pred_y <- .xplus_backend_fit_predict(backend, fit_pi, x)
-  cutoff <- stats::quantile(pred_y[positive_id], qq, names = FALSE)
+  cutoff <- if (cutoff_method == "quantile") {
+    stats::quantile(pred_y[positive_id], qq, names = FALSE)
+  } else {
+    # Elkan-Noto: P(z=1|x) ~ pred_y / c with c = mean labeled-positive score,
+    # so the 0.5 posterior boundary sits at c/2 on the raw score scale.
+    0.5 * mean(pred_y[positive_id])
+  }
   pred_coef1 <- if (backend$name == "glmnet") {
     stats::coef(fit_pi, s = "lambda.min")
   } else {
@@ -210,6 +224,7 @@ xplus <- function(x, y, alpha = 1, sample_use_time = 30, learning_rate = 1,
     fallback_reason = targets$reason, history = history, sampling_counts = sampling_counts,
     draw_counts = draw_counts, final_foldid = final_foldid, cv_measure = cv_measure,
     sigmoid_scale = sigmoid_scale, sampling = sampling, min_iter = min_iter,
+    cutoff_method = cutoff_method,
     stability_window = stability_window, min_coverage = min_coverage,
     backend = backend)
   validate_xplus(xplus_model)

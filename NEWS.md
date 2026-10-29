@@ -1,5 +1,13 @@
 # xplus (development version)
 
+* `xplus()` gains `cutoff_method`: `"quantile"` (default, original PLUS
+  rule) or `"elkan_noto"` (half the mean honest positive score — the 0.5
+  Elkan-Noto posterior boundary, which closes the threshold gap seen on
+  well-separated data). Exposed to parsnip via
+  `set_engine("xplus", cutoff_method = ...)`, and workflow
+  post-processors (`tailor::adjust_probability_threshold(tune())`) are
+  verified to tune with `tune_grid()`.
+
 * `pu_auc()` / `pu_auc_vec()`: a proper yardstick `prob_metric`
   (direction `maximize`) computing the labeled-vs-unlabeled AUC, so
   `metric_set(pu_auc)` works directly in `tune_grid()` and

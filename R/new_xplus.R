@@ -12,6 +12,9 @@
 #' @param pseudo_labels,original_y,fallback_used,fallback_reason Proposed probabilities before fallback, original numeric binary labels, fallback flag and reason (empty if unused); optional metadata default to `NULL` for legacy bundles.
 #' @param iterative_path,final_foldid,cv_measure,sigmoid_scale,sampling Iterative path and optional final cross-validation folds, measure (`deviance` or `auc`), positive sigmoid scale, and sampling mode (`bootstrap` or `unique`); optional controls default to `NULL`.
 #' @param qq Quantile parameter used for cutoff calibration.
+#' @param cutoff_method Cutoff rule used (`"quantile"` or `"elkan_noto"`);
+#'   `NULL` denotes a legacy object fitted before the option existed,
+#'   equivalent to `"quantile"`.
 #' @param call Original function call.
 #' @param max_iter,min_iter,stability_window,min_coverage Maximum iterations and optional minimum iterations, consecutive stability rounds, and unlabeled coverage required for stopping; optional controls default to `NULL`.
 #' @param backend [xplus_backend()] spec used for the fits; `NULL` denotes a
@@ -53,6 +56,7 @@ new_xplus <- function(
   min_iter = NULL,
   stability_window = NULL,
   min_coverage = NULL,
+  cutoff_method = NULL,
   backend = NULL
 ) {
   predicted_coefficients <- methods::as(
@@ -91,6 +95,7 @@ new_xplus <- function(
       min_iter = min_iter,
       stability_window = stability_window,
       min_coverage = min_coverage,
+      cutoff_method = cutoff_method,
       backend = backend
     ),
     class = "xplus"

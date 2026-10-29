@@ -34,6 +34,7 @@ new_xplus(
   min_iter = NULL,
   stability_window = NULL,
   min_coverage = NULL,
+  cutoff_method = NULL,
   backend = NULL
 )
 }
@@ -69,6 +70,10 @@ new_xplus(
 \item{stop_reason}{Reason fitting stopped: \code{"max_iter"}, \code{"label_stability"},
 \code{"budget_exhausted"}, or \code{"degenerate_labels"} (the pseudo-labels of the
 iterative training subset collapsed to a single class).}
+
+\item{cutoff_method}{Cutoff rule used (\code{"quantile"} or \code{"elkan_noto"});
+\code{NULL} denotes a legacy object fitted before the option existed,
+equivalent to \code{"quantile"}.}
 
 \item{backend}{\code{\link[=xplus_backend]{xplus_backend()}} spec used for the fits; \code{NULL} denotes a
 legacy object fitted before backend support, equivalent to \code{"glmnet"}.}

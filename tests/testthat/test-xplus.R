@@ -368,3 +368,21 @@ test_that("xplus survives near-single-class training subsets and final fits", {
   expect_s3_class(fit, "xplus")
   expect_equal(nrow(fit$pred_y), n)
 })
+
+test_that("cutoff_method elkan_noto equals half the mean positive score", {
+  sim <- simulate_pu_data(n = 300, p = 5, seed = 2, label_propensity = 0.4)
+  fq <- xplus(sim$x, sim$y, backend = "glmnet", seed = 1, nfolds = 4,
+              max_iter = 10)
+  fe <- xplus(sim$x, sim$y, backend = "glmnet", seed = 1, nfolds = 4,
+              max_iter = 10, cutoff_method = "elkan_noto")
+  expect_equal(fq$cutoff_method, "quantile")
+  expect_equal(fe$cutoff_method, "elkan_noto")
+  expect_equal(fe$cutoff, 0.5 * mean(fe$pred_y[sim$y == 1]), tolerance = 1e-8)
+  expect_equal(fq$cutoff,
+               unname(stats::quantile(fq$pred_y[sim$y == 1], fq$qq)))
+})
+
+test_that("cutoff_method rejects invalid values", {
+  sim <- simulate_pu_data(n = 80, p = 3, seed = 4)
+  expect_error(xplus(sim$x, sim$y, cutoff_method = "bogus"), "arg")
+})

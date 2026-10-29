@@ -151,3 +151,15 @@ test_that("workflow_set ranks backends by pu_auc", {
   expect_equal(nrow(rk), 2)
   expect_true(all(rk$.metric == "pu_auc"))
 })
+
+test_that("cutoff_method flows through parsnip engine args", {
+  skip_if_not_installed("parsnip")
+  library(parsnip)
+  sim <- simulate_pu_data(n = 120, p = 2, seed = 5, label_propensity = 0.5)
+  f <- fit_xy(pu_xplus(backend = "glmnet") |>
+              set_engine("xplus", cutoff_method = "elkan_noto"),
+              x = data.frame(sim$x), y = factor(sim$y, levels = 0:1))
+  expect_equal(f$fit$cutoff_method, "elkan_noto")
+  expect_equal(f$fit$cutoff, 0.5 * mean(f$fit$pred_y[sim$y == 1]),
+               tolerance = 1e-8)
+})
